@@ -175,6 +175,31 @@
   footer{
     text-align:center; color:var(--dim); font-size:11px; margin-top:28px; line-height:1.6;
   }
+
+  /* tabs */
+  .tabs{display:flex; gap:8px; margin:16px 4px 4px;}
+  .tab-btn{
+    flex:1; background:var(--card); border:1px solid var(--card-border); color:var(--muted);
+    font-family:inherit; font-weight:700; font-size:12px; letter-spacing:0.5px; text-transform:uppercase;
+    padding:10px 0; border-radius:10px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .tab-btn.active{background:var(--red); color:#fff; border-color:var(--red);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* standings */
+  .standings-table{width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--card-border); border-radius:16px; overflow:hidden;}
+  .standings-table th{text-align:left; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); padding:10px; border-bottom:1px solid var(--card-border); font-weight:700;}
+  .standings-table td{padding:10px; font-size:13px; border-bottom:1px solid #1e1e22; vertical-align:middle;}
+  .standings-table tr:last-child td{border-bottom:none;}
+  .standings-table td.pos{font-weight:900; color:var(--muted); width:24px;}
+  .standings-table td.pts{text-align:right; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .standings-driver{display:flex; align-items:center; gap:8px;}
+  .standings-flag{font-size:15px; flex-shrink:0;}
+  .standings-name{font-weight:600; color:var(--text);}
+  .standings-team{font-size:11px; color:var(--muted); display:block; margin-top:1px; font-weight:500;}
+  .standings-note{font-size:11px; color:var(--muted); margin-top:12px; text-align:center;}
+  .standings-loading, .standings-error{font-size:13px; color:var(--muted); text-align:center; padding:30px 0;}
 </style>
 </head>
 <body>
@@ -187,24 +212,36 @@
     <div class="tz">TIMES IN NEW YORK (ET)</div>
   </header>
 
-  <section class="hero" id="hero">
-    <div class="hero-label" id="hero-label">NEXT UP · F1</div>
-    <div class="hero-race" id="hero-race">—</div>
-    <div class="hero-session" id="hero-session">—</div>
-    <div class="hero-datetime" id="hero-datetime">—</div>
-    <div class="hero-location" id="hero-location">—</div>
-    <div class="hero-weekend" id="hero-weekend"></div>
-    <div class="cd-caption" id="cd-caption"></div>
-    <div class="countdown" id="countdown">
-      <div class="cd-block"><div class="num" id="cd-d">00</div><span class="lab">Days</span></div>
-      <div class="cd-block"><div class="num" id="cd-h">00</div><span class="lab">Hrs</span></div>
-      <div class="cd-block"><div class="num" id="cd-m">00</div><span class="lab">Min</span></div>
-      <div class="cd-block"><div class="num" id="cd-s">00</div><span class="lab">Sec</span></div>
-    </div>
-  </section>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="schedule" type="button">Schedule</button>
+    <button class="tab-btn" data-tab="standings" type="button">Standings</button>
+  </nav>
 
-  <div class="sect-title">2026 Season</div>
-  <div id="calendar"></div>
+  <div class="panel active" id="panel-schedule">
+    <section class="hero" id="hero">
+      <div class="hero-label" id="hero-label">NEXT UP · F1</div>
+      <div class="hero-race" id="hero-race">—</div>
+      <div class="hero-session" id="hero-session">—</div>
+      <div class="hero-datetime" id="hero-datetime">—</div>
+      <div class="hero-location" id="hero-location">—</div>
+      <div class="hero-weekend" id="hero-weekend"></div>
+      <div class="cd-caption" id="cd-caption"></div>
+      <div class="countdown" id="countdown">
+        <div class="cd-block"><div class="num" id="cd-d">00</div><span class="lab">Days</span></div>
+        <div class="cd-block"><div class="num" id="cd-h">00</div><span class="lab">Hrs</span></div>
+        <div class="cd-block"><div class="num" id="cd-m">00</div><span class="lab">Min</span></div>
+        <div class="cd-block"><div class="num" id="cd-s">00</div><span class="lab">Sec</span></div>
+      </div>
+    </section>
+
+    <div class="sect-title">2026 Season</div>
+    <div id="calendar"></div>
+  </div>
+
+  <div class="panel" id="panel-standings">
+    <div class="sect-title">F1 Driver's Championship</div>
+    <div id="standings-body"><div class="standings-loading">Loading standings…</div></div>
+  </div>
 
   <footer>
     Tap any session to mark it as one you're watching.<br>
@@ -545,6 +582,74 @@ document.getElementById("hero-weekend").addEventListener("click", handleSessClic
 window.addEventListener("load", () => {
   setTimeout(() => scrollToDefault(nextRoundNumberAtLoad), 50);
 });
+
+/* ---------- tabs ---------- */
+const tabButtons = document.querySelectorAll(".tab-btn");
+tabButtons.forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    tabButtons.forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+    if(btn.dataset.tab === "standings" && !standingsLoaded){
+      loadStandings();
+    }
+  });
+});
+
+/* ---------- F1 driver standings (live, simplified vs. FIA's per-round grid) ---------- */
+const NATIONALITY_FLAGS = {
+  "British":"🇬🇧","Dutch":"🇳🇱","Monegasque":"🇲🇨","Spanish":"🇪🇸","Mexican":"🇲🇽",
+  "Australian":"🇦🇺","French":"🇫🇷","German":"🇩🇪","Finnish":"🇫🇮","Canadian":"🇨🇦",
+  "Japanese":"🇯🇵","Thai":"🇹🇭","American":"🇺🇸","Italian":"🇮🇹","Chinese":"🇨🇳",
+  "Argentine":"🇦🇷","Brazilian":"🇧🇷","Danish":"🇩🇰","New Zealander":"🇳🇿",
+  "Belgian":"🇧🇪","Austrian":"🇦🇹","Swiss":"🇨🇭","Polish":"🇵🇱","Russian":"🇷🇺",
+  "Indonesian":"🇮🇩","Indian":"🇮🇳","South African":"🇿🇦"
+};
+
+let standingsLoaded = false;
+async function loadStandings(){
+  const body = document.getElementById("standings-body");
+  body.innerHTML = '<div class="standings-loading">Loading standings…</div>';
+  try{
+    const res = await fetch("https://api.jolpi.ca/ergast/f1/current/driverStandings.json");
+    if(!res.ok) throw new Error("fetch failed");
+    const json = await res.json();
+    const list = json?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
+    if(!list.length) throw new Error("empty standings");
+
+    let rows = "";
+    list.forEach(d=>{
+      const flag = NATIONALITY_FLAGS[d.Driver.nationality] || "";
+      rows += `
+        <tr>
+          <td class="pos">${d.position}</td>
+          <td>
+            <div class="standings-driver">
+              <span class="standings-flag">${flag}</span>
+              <span>
+                <span class="standings-name">${d.Driver.givenName} ${d.Driver.familyName}</span>
+                <span class="standings-team">${d.Constructors?.[0]?.name || ""} · ${d.Driver.nationality}</span>
+              </span>
+            </div>
+          </td>
+          <td class="pts">${d.points}</td>
+        </tr>
+      `;
+    });
+
+    body.innerHTML = `
+      <table class="standings-table">
+        <thead><tr><th></th><th>Driver</th><th style="text-align:right;">Pts</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="standings-note">Live F1 standings · country shown next to each driver</div>
+    `;
+    standingsLoaded = true;
+  }catch(e){
+    body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
+  }
+}
 
 /* service worker for installability (best effort, safe to fail) */
 if("serviceWorker" in navigator){

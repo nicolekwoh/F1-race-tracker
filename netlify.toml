@@ -1,6 +1,7 @@
 [build]
   functions = "netlify/functions"
 
-# Runs every Sunday at 23:00 UTC (~6-7pm US Eastern, after race weekends wrap up)
+# Checks every 5 minutes for a GP that just finished (function itself decides
+# whether to actually send — see weekly-race-email.mjs for the trigger logic).
 [functions."weekly-race-email"]
-  schedule = "0 23 * * 0"
+  schedule = "*/5 * * * *"
