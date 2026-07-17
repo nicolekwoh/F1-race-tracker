@@ -207,17 +207,22 @@
   .standings-matrix .subhdr{font-size:9px; color:var(--dim); font-weight:700; padding:3px 4px;}
   .standings-matrix .col-driver{
     position:sticky; left:0; z-index:2; background:var(--card);
-    text-align:left; padding-left:10px; padding-right:10px;
-    box-shadow:2px 0 0 var(--card-border);
+    text-align:left; width:74px; min-width:74px; max-width:74px;
+    padding-left:10px; padding-right:6px;
   }
   .standings-matrix thead .col-driver{z-index:3;}
   .standings-matrix .col-driver .standings-flag{margin-right:5px;}
   .standings-matrix .standings-name{font-weight:700; color:var(--text); font-size:12px;}
-  .standings-matrix .col-points{font-weight:800; color:var(--text); background:rgba(255,255,255,0.02);}
-  .standings-matrix thead .col-points{color:var(--meta);}
+  .standings-matrix .col-points{
+    position:sticky; left:74px; z-index:2; background:#1a1a1e;
+    font-weight:800; color:var(--text);
+    box-shadow:2px 0 0 var(--card-border);
+  }
+  .standings-matrix thead .col-points{color:var(--meta); z-index:3;}
   .standings-matrix .zero{color:var(--dim);}
   .standings-matrix tbody tr:first-child td{background:rgba(225,6,0,0.07);}
   .standings-matrix tbody tr:first-child .col-driver{background:#1c1414;}
+  .standings-matrix tbody tr:first-child .col-points{background:#241717;}
   .standings-legend{font-size:10px; color:var(--muted); margin-top:10px; text-align:right;}
 </style>
 </head>
@@ -691,8 +696,8 @@ async function loadStandings(){
       bodyRows += `
         <tr>
           <td class="col-driver"><span class="standings-flag">${flag}</span><span class="standings-name">${shortName}</span></td>
-          ${cells}
           <td class="col-points">${d.points}</td>
+          ${cells}
         </tr>
       `;
     });
@@ -703,8 +708,8 @@ async function loadStandings(){
           <thead>
             <tr>
               <th class="col-driver" rowspan="2">Driver</th>
-              ${headRoundCells}
               <th class="col-points" rowspan="2">Points</th>
+              ${headRoundCells}
             </tr>
             <tr>${headSubCells}</tr>
           </thead>
