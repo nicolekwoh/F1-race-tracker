@@ -187,19 +187,38 @@
   .panel{display:none;}
   .panel.active{display:block;}
 
-  /* standings */
-  .standings-table{width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--card-border); border-radius:16px; overflow:hidden;}
-  .standings-table th{text-align:left; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); padding:10px; border-bottom:1px solid var(--card-border); font-weight:700;}
-  .standings-table td{padding:10px; font-size:13px; border-bottom:1px solid #1e1e22; vertical-align:middle;}
-  .standings-table tr:last-child td{border-bottom:none;}
-  .standings-table td.pos{font-weight:900; color:var(--muted); width:24px;}
-  .standings-table td.pts{text-align:right; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
-  .standings-driver{display:flex; align-items:center; gap:8px;}
-  .standings-flag{font-size:15px; flex-shrink:0;}
-  .standings-name{font-weight:600; color:var(--text);}
-  .standings-team{font-size:11px; color:var(--muted); display:block; margin-top:1px; font-weight:500;}
-  .standings-note{font-size:11px; color:var(--muted); margin-top:12px; text-align:center;}
+  /* standings — full per-round matrix, modeled on FIA F2's standings grid */
   .standings-loading, .standings-error{font-size:13px; color:var(--muted); text-align:center; padding:30px 0;}
+  .standings-scroll{
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    border:1px solid var(--card-border); border-radius:14px; background:var(--card);
+  }
+  .standings-matrix{border-collapse:collapse; width:max-content; min-width:100%;}
+  .standings-matrix th, .standings-matrix td{
+    padding:6px 7px; font-size:11px; text-align:center; white-space:nowrap;
+    border-bottom:1px solid #1e1e22; font-variant-numeric:tabular-nums;
+  }
+  .standings-matrix thead th{
+    color:var(--meta); font-weight:700; border-bottom:1px solid var(--card-border);
+    background:var(--card);
+  }
+  .standings-matrix .round-hdr{font-size:9.5px; line-height:1.35; padding:7px 5px; font-weight:700;}
+  .standings-matrix .round-date{display:block; font-weight:500; color:var(--dim); font-size:9px; margin-top:1px;}
+  .standings-matrix .subhdr{font-size:9px; color:var(--dim); font-weight:700; padding:3px 4px;}
+  .standings-matrix .col-driver{
+    position:sticky; left:0; z-index:2; background:var(--card);
+    text-align:left; padding-left:10px; padding-right:10px;
+    box-shadow:2px 0 0 var(--card-border);
+  }
+  .standings-matrix thead .col-driver{z-index:3;}
+  .standings-matrix .col-driver .standings-flag{margin-right:5px;}
+  .standings-matrix .standings-name{font-weight:700; color:var(--text); font-size:12px;}
+  .standings-matrix .col-points{font-weight:800; color:var(--text); background:rgba(255,255,255,0.02);}
+  .standings-matrix thead .col-points{color:var(--meta);}
+  .standings-matrix .zero{color:var(--dim);}
+  .standings-matrix tbody tr:first-child td{background:rgba(225,6,0,0.07);}
+  .standings-matrix tbody tr:first-child .col-driver{background:#1c1414;}
+  .standings-legend{font-size:10px; color:var(--muted); margin-top:10px; text-align:right;}
 </style>
 </head>
 <body>
@@ -612,41 +631,91 @@ async function loadStandings(){
   const body = document.getElementById("standings-body");
   body.innerHTML = '<div class="standings-loading">Loading standings…</div>';
   try{
-    const res = await fetch("https://api.jolpi.ca/ergast/f1/current/driverStandings.json");
-    if(!res.ok) throw new Error("fetch failed");
-    const json = await res.json();
-    const list = json?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
-    if(!list.length) throw new Error("empty standings");
+    const [standingsRes, resultsRes, sprintRes] = await Promise.all([
+      fetch("https://api.jolpi.ca/ergast/f1/2026/driverStandings.json"),
+      fetch("https://api.jolpi.ca/ergast/f1/2026/results.json?limit=1000"),
+      fetch("https://api.jolpi.ca/ergast/f1/2026/sprint.json?limit=1000"),
+    ]);
+    if(!standingsRes.ok || !resultsRes.ok) throw new Error("standings/results fetch failed");
 
-    let rows = "";
-    list.forEach(d=>{
+    const standingsJson = await standingsRes.json();
+    const resultsJson = await resultsRes.json();
+    const sprintJson = sprintRes.ok ? await sprintRes.json() : null;
+
+    const standingsList = standingsJson?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
+    if(!standingsList.length) throw new Error("empty standings");
+
+    // per-round points, keyed by round number then driverId — mirrors the FIA
+    // F2 standings grid, which breaks every round into Sprint Race + Race points
+    const raceMap = {};
+    (resultsJson?.MRData?.RaceTable?.Races || []).forEach(race=>{
+      const m = {};
+      (race.Results || []).forEach(r=>{ m[r.Driver.driverId] = r.points; });
+      raceMap[race.round] = m;
+    });
+    const sprintMap = {};
+    (sprintJson?.MRData?.RaceTable?.Races || []).forEach(race=>{
+      const m = {};
+      (race.SprintResults || []).forEach(r=>{ m[r.Driver.driverId] = r.points; });
+      sprintMap[race.round] = m;
+    });
+
+    // column headers, one per round on the calendar (F1_ROUNDS is already
+    // defined above for the Schedule tab — reused here as the single source
+    // of truth for round names/locations/dates)
+    const roundCols = F1_ROUNDS.map(r=>{
+      const start = new Date(r.sessions.fp1 || r.sessions.fp2 || r.sessions.qualifying);
+      const end = new Date(r.sessions.gp);
+      return { round: String(r.round), location: r.location, dateLabel: fmtDateRange(start, end) };
+    });
+
+    let headRoundCells = "";
+    let headSubCells = "";
+    roundCols.forEach(c=>{
+      headRoundCells += `<th class="round-hdr" colspan="2">${c.location}<span class="round-date">${c.dateLabel}</span></th>`;
+      headSubCells += `<th class="subhdr">SR</th><th class="subhdr">R</th>`;
+    });
+
+    let bodyRows = "";
+    standingsList.forEach(d=>{
+      const did = d.Driver.driverId;
       const flag = NATIONALITY_FLAGS[d.Driver.nationality] || "";
-      rows += `
+      const shortName = d.Driver.code || (d.Driver.givenName[0] + ". " + d.Driver.familyName);
+      let cells = "";
+      roundCols.forEach(c=>{
+        const sp = sprintMap[c.round]?.[did];
+        const rp = raceMap[c.round]?.[did];
+        cells += `<td>${sp === undefined ? '<span class="zero">-</span>' : sp}</td>`;
+        cells += `<td>${rp === undefined ? '<span class="zero">-</span>' : rp}</td>`;
+      });
+      bodyRows += `
         <tr>
-          <td class="pos">${d.position}</td>
-          <td>
-            <div class="standings-driver">
-              <span class="standings-flag">${flag}</span>
-              <span>
-                <span class="standings-name">${d.Driver.givenName} ${d.Driver.familyName}</span>
-                <span class="standings-team">${d.Constructors?.[0]?.name || ""} · ${d.Driver.nationality}</span>
-              </span>
-            </div>
-          </td>
-          <td class="pts">${d.points}</td>
+          <td class="col-driver"><span class="standings-flag">${flag}</span><span class="standings-name">${shortName}</span></td>
+          ${cells}
+          <td class="col-points">${d.points}</td>
         </tr>
       `;
     });
 
     body.innerHTML = `
-      <table class="standings-table">
-        <thead><tr><th></th><th>Driver</th><th style="text-align:right;">Pts</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="standings-note">Live F1 standings · country shown next to each driver</div>
+      <div class="standings-scroll">
+        <table class="standings-matrix">
+          <thead>
+            <tr>
+              <th class="col-driver" rowspan="2">Driver</th>
+              ${headRoundCells}
+              <th class="col-points" rowspan="2">Points</th>
+            </tr>
+            <tr>${headSubCells}</tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </div>
+      <div class="standings-legend">SR: Sprint Race &nbsp;·&nbsp; R: Race &nbsp;·&nbsp; scroll to see every round</div>
     `;
     standingsLoaded = true;
   }catch(e){
+    console.error("Standings load failed:", e);
     body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
   }
 }
