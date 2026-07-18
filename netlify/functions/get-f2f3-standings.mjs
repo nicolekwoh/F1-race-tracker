@@ -16,22 +16,29 @@ async function getFiaStandings(seriesUrl, seriesLabel) {
     const html = await res.text();
 
     const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-    if (!match) throw new Error(seriesLabel + " __NEXT_DATA__ not found");
+    if (!match) {
+      // TEMP DEBUG: report back what the page actually looked like instead of
+      // just failing silently, so we can see why the expected script tag is missing.
+      throw new Error(
+        seriesLabel + " __NEXT_DATA__ not found. html length=" + html.length +
+        " snippet=" + html.slice(0, 300).replace(/\s+/g, " ")
+      );
+    }
     const data = JSON.parse(match[1]);
 
     const found = findStandingsArray(data);
     if (!found) throw new Error(seriesLabel + " standings array not found in page data");
 
     // Full list this time (the email version only needed the top 10).
-    return found.map((row, i) => ({
+    return { ok: true, rows: found.map((row, i) => ({
       position: row.position || row.rank || i + 1,
       name: row.driverName || row.name || row.driver || "Unknown",
       team: row.teamName || row.team || "",
       points: row.points ?? row.totalPoints ?? "?",
-    }));
+    })) };
   } catch (err) {
     console.error(seriesLabel + " standings lookup failed:", err);
-    return null;
+    return { ok: false, error: err.message };
   }
 }
 
@@ -61,12 +68,18 @@ function findStandingsArray(obj, depth = 0) {
 }
 
 export default async (req) => {
-  const [f2, f3] = await Promise.all([
+  const [f2Result, f3Result] = await Promise.all([
     getFiaStandings("https://www.fiaformula2.com/en/standings/2026/drivers", "F2"),
     getFiaStandings("https://www.fiaformula3.com/en/standings/2026/drivers", "F3"),
   ]);
 
-  return new Response(JSON.stringify({ f2, f3, fetchedAt: new Date().toISOString() }), {
+  return new Response(JSON.stringify({
+    f2: f2Result.ok ? f2Result.rows : null,
+    f3: f3Result.ok ? f3Result.rows : null,
+    f2Error: f2Result.ok ? null : f2Result.error,
+    f3Error: f3Result.ok ? null : f3Result.error,
+    fetchedAt: new Date().toISOString(),
+  }), {
     status: 200,
     headers: {
       "Content-Type": "application/json",
