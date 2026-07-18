@@ -187,6 +187,18 @@
   .panel{display:none;}
   .panel.active{display:block;}
 
+  /* standings sub-tabs (F1 / F2 / F3 within the Standings panel) */
+  .subtabs{display:flex; gap:8px; margin:4px 4px 0;}
+  .subtab-btn{
+    padding:7px 16px; border-radius:20px; border:1px solid var(--card-border);
+    background:var(--card); color:var(--muted); font-family:inherit; font-weight:700;
+    font-size:11px; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .subtab-btn.active{background:var(--red); color:#fff; border-color:var(--red);}
+  .subtab-btn.active[data-series="f2"]{background:#1e6fd9; border-color:#1e6fd9;}
+  .subtab-btn.active[data-series="f3"]{background:#7b3fe4; border-color:#7b3fe4;}
+
   /* standings — full per-round matrix, modeled on FIA F2's standings grid */
   .standings-loading, .standings-error{font-size:13px; color:var(--muted); text-align:center; padding:30px 0;}
   .standings-scroll{
@@ -224,6 +236,18 @@
   .standings-matrix tbody tr:first-child .col-driver{background:#1c1414;}
   .standings-matrix tbody tr:first-child .col-points{background:#241717;}
   .standings-legend{font-size:10px; color:var(--muted); margin-top:10px; text-align:right;}
+
+  /* simple flat standings table (F2/F3 — current totals only, no per-round grid) */
+  .standings-simple{width:100%; border-collapse:collapse;}
+  .standings-simple th, .standings-simple td{
+    padding:9px 10px; font-size:12.5px; text-align:left; border-bottom:1px solid #1e1e22;
+  }
+  .standings-simple th{color:var(--meta); font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.4px;}
+  .standings-simple td.pos{color:var(--dim); width:28px; font-variant-numeric:tabular-nums;}
+  .standings-simple td.name{font-weight:700; color:var(--text);}
+  .standings-simple td.team{color:var(--meta); font-size:11.5px;}
+  .standings-simple td.pts{text-align:right; font-weight:800; font-variant-numeric:tabular-nums;}
+  .standings-simple tbody tr:first-child td{background:rgba(225,6,0,0.06);}
 </style>
 </head>
 <body>
@@ -263,7 +287,12 @@
   </div>
 
   <div class="panel" id="panel-standings">
-    <div class="sect-title">F1 Driver's Championship</div>
+    <nav class="subtabs" id="standings-subtabs">
+      <button class="subtab-btn active" data-series="f1" type="button">F1</button>
+      <button class="subtab-btn" data-series="f2" type="button">F2</button>
+      <button class="subtab-btn" data-series="f3" type="button">F3</button>
+    </nav>
+    <div class="sect-title" id="standings-title">F1 Driver's Championship</div>
     <div id="standings-body"><div class="standings-loading">Loading standings…</div></div>
   </div>
 
@@ -615,11 +644,79 @@ tabButtons.forEach(btn=>{
     btn.classList.add("active");
     document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
     document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
-    if(btn.dataset.tab === "standings" && !standingsLoaded){
+    if(btn.dataset.tab === "standings" && !standingsLoaded.f1){
       loadStandings();
     }
   });
 });
+
+/* ---------- standings sub-tabs (F1 live API / F2 & F3 live FIA scrape) ---------- */
+const STANDINGS_TITLES = {
+  f1: "F1 Driver's Championship",
+  f2: "F2 Driver's Championship",
+  f3: "F3 Driver's Championship"
+};
+let activeStandingsSeries = "f1";
+const f2f3Cache = { f2: null, f3: null };
+
+document.getElementById("standings-subtabs").addEventListener("click", (e)=>{
+  const btn = e.target.closest(".subtab-btn");
+  if(!btn) return;
+  const series = btn.dataset.series;
+  if(series === activeStandingsSeries) return;
+  activeStandingsSeries = series;
+  document.querySelectorAll(".subtab-btn").forEach(b=>b.classList.toggle("active", b === btn));
+  document.getElementById("standings-title").textContent = STANDINGS_TITLES[series];
+
+  if(series === "f1"){
+    if(standingsLoaded.f1) renderF1StandingsFromCache();
+    else loadStandings();
+  } else {
+    if(f2f3Cache[series]) renderSimpleStandings(series, f2f3Cache[series]);
+    else loadF2F3Standings(series);
+  }
+});
+
+function renderSimpleStandings(series, list){
+  const body = document.getElementById("standings-body");
+  if(!list || !list.length){
+    body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
+    return;
+  }
+  const rows = list.map(d => `
+    <tr>
+      <td class="pos">${d.position}</td>
+      <td class="name">${d.name}</td>
+      <td class="team">${d.team || ""}</td>
+      <td class="pts">${d.points}</td>
+    </tr>
+  `).join("");
+  body.innerHTML = `
+    <table class="standings-simple">
+      <thead><tr><th></th><th>Driver</th><th>Team</th><th style="text-align:right;">Points</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+async function loadF2F3Standings(series){
+  const body = document.getElementById("standings-body");
+  body.innerHTML = '<div class="standings-loading">Loading standings…</div>';
+  try{
+    const res = await fetch("/.netlify/functions/get-f2f3-standings");
+    if(!res.ok) throw new Error("f2/f3 standings fetch failed");
+    const json = await res.json();
+    f2f3Cache.f2 = json.f2;
+    f2f3Cache.f3 = json.f3;
+    // series may have changed while this was in flight (user tapped the other tab) — only render if still relevant
+    if(activeStandingsSeries === series) renderSimpleStandings(series, json[series]);
+  }catch(e){
+    console.error("F2/F3 standings load failed:", e);
+    if(activeStandingsSeries === series){
+      body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
+    }
+  }
+}
 
 /* ---------- F1 driver standings (live, simplified vs. FIA's per-round grid) ---------- */
 const NATIONALITY_FLAGS = {
@@ -631,7 +728,13 @@ const NATIONALITY_FLAGS = {
   "Indonesian":"🇮🇩","Indian":"🇮🇳","South African":"🇿🇦"
 };
 
-let standingsLoaded = false;
+let standingsLoaded = { f1: false };
+let f1StandingsHtml = "";
+
+function renderF1StandingsFromCache(){
+  document.getElementById("standings-body").innerHTML = f1StandingsHtml;
+}
+
 async function loadStandings(){
   const body = document.getElementById("standings-body");
   body.innerHTML = '<div class="standings-loading">Loading standings…</div>';
@@ -702,7 +805,7 @@ async function loadStandings(){
       `;
     });
 
-    body.innerHTML = `
+    f1StandingsHtml = `
       <div class="standings-scroll">
         <table class="standings-matrix">
           <thead>
@@ -718,10 +821,13 @@ async function loadStandings(){
       </div>
       <div class="standings-legend">SR: Sprint Race &nbsp;·&nbsp; R: Race &nbsp;·&nbsp; scroll to see every round</div>
     `;
-    standingsLoaded = true;
+    if(activeStandingsSeries === "f1") body.innerHTML = f1StandingsHtml;
+    standingsLoaded.f1 = true;
   }catch(e){
     console.error("Standings load failed:", e);
-    body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
+    if(activeStandingsSeries === "f1"){
+      body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
+    }
   }
 }
 
