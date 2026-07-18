@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>Race Tracker — F1 &amp; F2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 Race Tracker</title>
 <meta name="theme-color" content="#0a0a0c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,713 +12,318 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0a0a0c;
-    --card:#151518;
-    --card-border:#25252a;
-    --red:#e10600;
-    --text:#f2f2f2;
-    --muted:#8a8a92;
-    --meta:#c3c3cc;
-    --dim:#55555c;
-    --done:#3a3a40;
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #0a0a0c;
+    color: #f2f2f4;
+    min-height: 100vh;
+    padding-bottom: 40px;
   }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html,body{background:var(--bg); color:var(--text);}
-  body{
-    font-family:'Titillium Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    min-height:100vh;
-    padding-bottom:40px;
-    -webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:640px; margin:0 auto; padding:0 16px;}
+  .app { max-width: 900px; margin: 0 auto; padding: 16px; }
 
-  /* header */
-  header.top{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:18px 4px 10px;
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 2px 18px 2px;
   }
-  header.top .brand{
-    display:flex; align-items:center; gap:8px;
-    font-weight:900; letter-spacing:0.5px; font-size:15px; text-transform:uppercase;
-  }
-  header.top .brand svg, header.top .brand img{flex-shrink:0;}
-  header.top .tz{font-size:11px; color:var(--muted); font-weight:600; letter-spacing:0.5px;}
+  .topbar .flag { font-size: 22px; }
+  .topbar h1 { font-size: 15px; font-weight: 800; letter-spacing: 1.5px; color: #fff; }
+  .topbar .updated { margin-left: auto; font-size: 12.5px; font-weight: 600; color: #9a9aa2; text-align: right; }
 
-  /* hero */
-  .hero{
-    background:linear-gradient(160deg, #17171b 0%, #0e0e10 100%);
-    border:1px solid var(--card-border);
-    border-radius:20px;
-    padding:26px 22px 22px;
-    margin-top:6px;
-    position:relative;
-    overflow:hidden;
+  /* Tabs */
+  .tabs { display: flex; gap: 10px; margin-bottom: 18px; }
+  .tab-btn {
+    flex: 1; padding: 13px 10px; border-radius: 12px; border: none;
+    background: #17171b; color: #b7b7c0; font-weight: 700; font-size: 13px;
+    letter-spacing: 0.5px; cursor: pointer; transition: all .15s ease;
+    font-family: inherit; -webkit-tap-highlight-color: transparent;
   }
-  .hero::before{
-    content:"";
-    position:absolute; top:0; right:0; width:120px; height:120px;
-    background:repeating-conic-gradient(#1c1c20 0% 25%, #0a0a0c 0% 50%) 50% / 14px 14px;
-    opacity:0.5;
-    -webkit-mask-image:radial-gradient(circle at top right, black, transparent 70%);
-    mask-image:radial-gradient(circle at top right, black, transparent 70%);
-  }
-  .hero-label{
-    font-size:11px; font-weight:700; letter-spacing:2px; color:var(--red);
-    text-transform:uppercase; margin-bottom:10px; position:relative;
-  }
-  .hero-race{font-size:24px; font-weight:900; line-height:1.2; position:relative;}
-  .hero-session{font-size:15px; font-weight:600; color:#d8d8dc; margin-top:4px; position:relative;}
-  .hero-datetime{
-    font-size:17px; font-weight:700; color:var(--text); margin-top:14px; position:relative;
-  }
-  .hero-datetime .et{color:var(--muted); font-weight:600; font-size:13px; margin-left:4px;}
-  .hero-location{font-size:13px; color:var(--meta); margin-top:4px; position:relative;}
+  .tab-btn.active { background: #e10600; color: #fff; box-shadow: 0 4px 14px rgba(225,6,0,.35); }
 
-  .hero-weekend{
-    margin-top:18px; padding-top:14px; border-top:1px solid #232327; position:relative;
+  .subtabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .subtab-btn {
+    padding: 8px 18px; border-radius: 20px; border: 1px solid #2a2a30;
+    background: #141417; color: #9a9aa2; font-weight: 700; font-size: 12px; cursor: pointer;
+    transition: all .15s ease; font-family: inherit; -webkit-tap-highlight-color: transparent;
   }
-  .hero-weekend .series-label{
-    font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
-    color:#6e6e78; margin-bottom:6px;
-  }
-  .hero-weekend .sess-row.is-next{
-    background:rgba(225,6,0,0.08); border-radius:8px; margin:0 -8px; padding:8px;
-  }
-  .hero-weekend .sess-row.is-next .sess-name{color:var(--red); font-weight:700;}
-  .hero-weekend .sess-row.is-next .sess-when{color:var(--text); font-weight:700;}
+  .subtab-btn.active.sub-f1 { background: #e10600; color: #fff; border-color: #e10600; box-shadow: 0 3px 10px rgba(225,6,0,.35); }
+  .subtab-btn.active.sub-f2 { background: #1e6fd9; color: #fff; border-color: #1e6fd9; box-shadow: 0 3px 10px rgba(30,111,217,.35); }
+  .subtab-btn.active.sub-f3 { background: #7b3fe4; color: #fff; border-color: #7b3fe4; box-shadow: 0 3px 10px rgba(123,63,228,.35); }
 
-  .cd-caption{
-    font-size:11px; color:var(--muted); margin-top:16px; letter-spacing:0.5px; position:relative;
+  /* Hero card */
+  .hero {
+    position: relative; border-radius: 18px; overflow: hidden;
+    background: linear-gradient(160deg, #1a1a1f 0%, #141417 60%);
+    border: 1px solid #26262c; padding: 20px 20px 22px 20px; margin-bottom: 18px;
   }
-  .countdown{
-    display:flex; gap:10px; margin-top:8px; position:relative;
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, rgba(225,6,0,.05) 0 2px, transparent 2px 14px);
+    pointer-events: none;
   }
-  .cd-block{
-    flex:1; background:#0a0a0c; border:1px solid var(--card-border);
-    border-radius:12px; padding:10px 4px; text-align:center;
-  }
-  .cd-block .num{font-size:26px; font-weight:900; font-variant-numeric:tabular-nums; line-height:1;}
-  .cd-block .lab{font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:5px; display:block;}
+  .hero-eyebrow { color: #ff3b30; font-weight: 800; font-size: 11px; letter-spacing: 1.5px; margin-bottom: 6px; }
+  .hero-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .hero-loc { font-size: 12.5px; color: #9a9aa2; margin-bottom: 12px; }
+  .hero-when { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 16px; }
 
-  .hero.live .hero-label{color:#2ecc40;}
-  .hero.live .cd-block .num{color:#2ecc40;}
-
-  /* section title */
-  .sect-title{
-    font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
-    color:var(--muted); margin:30px 4px 12px;
+  .weekend-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+  .sess-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #141417; border-radius: 10px; border-left: 3px solid #2a2a30;
+    padding: 10px 12px 10px 13px; cursor: pointer; user-select: none;
+  }
+  .sess-row.sess-f1 { border-left-color: #e10600; }
+  .sess-row.sess-f2 { border-left-color: #1e6fd9; }
+  .sess-row.sess-f3 { border-left-color: #7b3fe4; }
+  .sess-row.done { opacity: .38; }
+  .sess-row.next { background: linear-gradient(90deg, rgba(225,6,0,.18), rgba(225,6,0,.04)); }
+  .sess-row.starred { background: rgba(255,176,32,.16); }
+  .sess-row.starred .sess-label, .sess-row.starred .sess-time { color: #ffb020; }
+  .sess-check { width: 16px; text-align: center; color: #ffb020; font-weight: 800; font-size: 14px; }
+  .sess-chip {
+    font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; letter-spacing: .5px;
+  }
+  .chip-f1 { background: #e10600; color: #fff; }
+  .chip-f2 { background: #1e6fd9; color: #fff; }
+  .chip-f3 { background: #7b3fe4; color: #fff; }
+  .sess-label { flex: 1; font-size: 13px; font-weight: 600; color: #e8e8ec; }
+  .sess-row.done .sess-label { text-decoration: line-through; }
+  .sess-time { font-size: 12px; color: #9a9aa2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .next-badge {
+    background: #e10600; color: #fff; font-size: 9px; font-weight: 800;
+    padding: 3px 7px; border-radius: 6px; letter-spacing: .5px; margin-right: 2px;
   }
 
-  /* calendar */
-  .round-card{
-    background:var(--card); border:1px solid var(--card-border); border-radius:16px;
-    padding:16px 16px 14px; margin-bottom:12px;
+  /* Countdown */
+  .cd-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #8a8a92; margin-bottom: 10px; text-transform: uppercase; }
+  .cd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .cd-cell {
+    background: #0e0e11; border: 1px solid #2a2a30; border-radius: 14px;
+    padding: 14px 4px 10px 4px; text-align: center;
   }
-  .round-card.next{border-color:var(--red); box-shadow:0 0 0 1px var(--red) inset;}
+  .cd-num {
+    font-family: "SF Mono", "Roboto Mono", Consolas, monospace;
+    font-size: clamp(26px, 6vw, 36px); font-weight: 800; color: #fff;
+    font-variant-numeric: tabular-nums; line-height: 1;
+    text-shadow: 0 0 18px rgba(225,6,0,.45);
+  }
+  .cd-unit { margin-top: 6px; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: #86868f; }
+  .cd-target { margin-top: 10px; font-size: 11.5px; color: #9a9aa2; line-height: 1.4; }
+  .cd-target b { color: #fff; }
 
-  .round-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:2px;}
-  .round-name{font-size:15px; font-weight:700;}
-  .round-badge{
-    font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
-    padding:3px 8px; border-radius:20px; white-space:nowrap;
+  /* Season list */
+  .section-title { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: #8a8a92; margin: 22px 0 10px 2px; }
+  .section-hint { font-size: 13px; color: #9a9aa2; }
+  .round-card {
+    background: #131316; border: 1px solid #232328; border-radius: 14px;
+    padding: 14px 16px 16px 16px; margin-bottom: 12px;
   }
-  .round-badge.next{background:var(--red); color:#fff;}
-  .round-badge.upcoming{background:#1e1e22; color:var(--meta);}
+  .round-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+  .round-name { font-size: 15px; font-weight: 800; color: #fff; }
+  .round-meta { font-size: 11.5px; color: #9a9aa2; margin-top: 2px; }
+  .round-badge {
+    font-size: 9.5px; font-weight: 800; padding: 3px 8px; border-radius: 6px; letter-spacing: .5px;
+  }
+  .badge-next { background: #e10600; color: #fff; }
+  .badge-live { background: #ffb020; color: #1a1200; }
+  .badge-done { background: #26262c; color: #9a9aa2; }
+  .badge-upcoming { background: #1c1c21; color: #7a7a82; }
 
-  .round-meta{margin-bottom:12px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
-  .round-dates{font-size:16px; font-weight:700; color:var(--text);}
-  .round-loc{font-size:12px; color:var(--meta); font-weight:500;}
+  /* Compact (completed) round row */
+  .round-compact {
+    display: flex; align-items: center; gap: 10px;
+    background: #101012; border: 1px solid #1c1c21; border-radius: 12px;
+    padding: 11px 14px; margin-bottom: 8px; cursor: pointer; opacity: .68;
+  }
+  .round-compact:hover { opacity: .9; }
+  .round-compact .rc-name { font-size: 13px; font-weight: 700; color: #c9c9d0; }
+  .round-compact .rc-meta { font-size: 10.5px; color: #6f6f78; margin-top: 1px; }
+  .round-compact .rc-chevron { margin-left: auto; font-size: 11px; color: #6f6f78; }
+  .round-compact-expanded { margin-bottom: 12px; }
 
-  .sess-list{display:flex; flex-direction:column; gap:0; margin-top:8px;}
-  .sess-row{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:8px 8px 8px 12px; margin:0 -8px; border-radius:8px;
-    font-size:13px; cursor:pointer;
-    -webkit-tap-highlight-color:transparent;
-    transition:background .12s ease;
+  /* Standings */
+  .standings-loading, .standings-error { font-size: 13px; color: #9a9aa2; text-align: center; padding: 30px 0; }
+  .std-wrap { background: #131316; border: 1px solid #232328; border-radius: 14px; overflow: hidden; border-top: 3px solid #333; margin-bottom: 18px; }
+  .std-wrap.sub-f1 { border-top-color: #e10600; }
+  .std-wrap.sub-f2 { border-top-color: #1e6fd9; }
+  .std-wrap.sub-f3 { border-top-color: #7b3fe4; }
+  .std-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.std { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  table.std th, table.std td { padding: 9px 10px; white-space: nowrap; text-align: center; }
+  table.std thead th {
+    background: #1a1a1f; color: #9a9aa2; font-size: 10px; font-weight: 800;
+    letter-spacing: .4px; border-bottom: 1px solid #232328; position: sticky; top: 0;
   }
-  .sess-row + .sess-row{border-top:1px solid #1e1e22;}
-  .sess-row:active{background:rgba(255,255,255,0.05);}
-  .sess-row.f1{box-shadow:inset 3px 0 0 rgba(225,6,0,0.55);}
-  .sess-row.f2{box-shadow:inset 3px 0 0 rgba(59,130,246,0.6);}
-  .sess-row.f3{box-shadow:inset 3px 0 0 rgba(167,139,250,0.6);}
-  .sess-row.past.f1{box-shadow:inset 3px 0 0 rgba(225,6,0,0.2);}
-  .sess-row.past.f2{box-shadow:inset 3px 0 0 rgba(59,130,246,0.22);}
-  .sess-row.past.f3{box-shadow:inset 3px 0 0 rgba(167,139,250,0.24);}
-  .sess-name{color:var(--text); font-weight:600; display:flex; align-items:center; gap:7px;}
-  .sess-row.past .sess-name{color:var(--dim); font-weight:400; text-decoration:line-through; text-decoration-color:#3a3a40;}
-  .sess-when{display:flex; align-items:center; gap:8px; color:var(--meta); font-variant-numeric:tabular-nums; font-weight:600;}
-  .sess-row.past .sess-when{color:var(--done); font-weight:400;}
+  table.std thead tr.venue-row th { font-size: 10px; color: #c9c9d0; padding-bottom: 2px; }
+  table.std thead tr.sub-row th { padding-top: 2px; font-size: 9.5px; color: #6f6f78; }
+  table.std thead tr.venue-row th.future-col { color: #55555c; }
+  table.std td.driver-cell, table.std th.driver-cell {
+    position: sticky; left: 0; width: 148px; min-width: 148px; max-width: 148px;
+    background: #16161a; text-align: left; font-weight: 700; color: #fff;
+    z-index: 2; border-right: 1px solid #232328; overflow: hidden; text-overflow: ellipsis;
+  }
+  table.std th.driver-cell { background: #1a1a1f; z-index: 4; }
+  table.std td.pts-cell, table.std th.pts-cell {
+    position: sticky; left: 148px; width: 62px; min-width: 62px;
+    font-weight: 800; color: #fff; background: #17171b; z-index: 2; border-right: 1px solid #232328;
+  }
+  table.std th.pts-cell { background: #1a1a1f; z-index: 4; }
+  table.std td.pts-cell.accent-f1 { color: #ff8177; background: rgba(225,6,0,.28); }
+  table.std td.pts-cell.accent-f2 { color: #74b4ff; background: rgba(30,111,217,.24); }
+  table.std td.pts-cell.accent-f3 { color: #cbaaff; background: rgba(123,63,228,.24); }
+  table.std tbody tr:nth-child(odd) td { background-color: rgba(255,255,255,.015); }
+  table.std tbody tr:nth-child(odd) td.driver-cell { background-color: #17171b; }
+  table.std tbody tr:hover td { background-color: rgba(225,6,0,.06); }
+  table.std tbody tr:hover td.driver-cell { background-color: #1c1414; }
+  .zero-val { color: #6b6b74; }
+  .pending-val { color: #45454c; }
+  .flag-ico { margin-right: 6px; }
+  .std-footnote { padding: 10px 14px; font-size: 10.5px; color: #6f6f78; border-top: 1px solid #232328; }
 
-  .tag{
-    font-size:9px; font-weight:700; letter-spacing:0.5px; padding:2px 5px;
-    border-radius:4px; line-height:1.4; flex-shrink:0;
+  /* Charts */
+  .chart-card {
+    background: #131316; border: 1px solid #232328; border-radius: 14px;
+    padding: 16px 16px 10px 16px; margin-bottom: 16px;
   }
-  .tag.f1{background:rgba(225,6,0,0.16); color:#ff6a62; border:1px solid rgba(225,6,0,0.4);}
-  .tag.f2{background:rgba(59,130,246,0.16); color:#7fb3ff; border:1px solid rgba(59,130,246,0.45);}
-  .tag.f3{background:rgba(167,139,250,0.16); color:#c1adff; border:1px solid rgba(167,139,250,0.45);}
-  .tag.next{background:var(--red); color:#fff; border:1px solid var(--red);}
-  .sess-row.past .tag{opacity:0.55;}
-
-  .sess-row.selected{background:rgba(255,183,3,0.10);}
-  .sess-row.selected + .sess-row{border-top-color:transparent;}
-  .sess-row.selected .sess-name::before{
-    content:"\2713"; color:#ffb703; font-weight:900; font-size:12px;
-  }
-  .sess-row.selected .sess-when{color:#ffcf6b;}
-  .sess-row.selected.past{background:rgba(255,183,3,0.05);}
-  .sess-row.selected.past .sess-name::before{color:#7a6a3a;}
-
-  footer{
-    text-align:center; color:var(--dim); font-size:11px; margin-top:28px; line-height:1.6;
-  }
-
-  /* tabs */
-  .tabs{display:flex; gap:8px; margin:16px 4px 4px;}
-  .tab-btn{
-    flex:1; background:var(--card); border:1px solid var(--card-border); color:var(--muted);
-    font-family:inherit; font-weight:700; font-size:12px; letter-spacing:0.5px; text-transform:uppercase;
-    padding:10px 0; border-radius:10px; cursor:pointer; -webkit-tap-highlight-color:transparent;
-  }
-  .tab-btn.active{background:var(--red); color:#fff; border-color:var(--red);}
-  .panel{display:none;}
-  .panel.active{display:block;}
-
-  /* standings sub-tabs (F1 / F2 / F3 within the Standings panel) */
-  .subtabs{display:flex; gap:8px; margin:4px 4px 0;}
-  .subtab-btn{
-    padding:7px 16px; border-radius:20px; border:1px solid var(--card-border);
-    background:var(--card); color:var(--muted); font-family:inherit; font-weight:700;
-    font-size:11px; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer;
-    -webkit-tap-highlight-color:transparent;
-  }
-  .subtab-btn.active{background:var(--red); color:#fff; border-color:var(--red);}
-  .subtab-btn.active[data-series="f2"]{background:#1e6fd9; border-color:#1e6fd9;}
-  .subtab-btn.active[data-series="f3"]{background:#7b3fe4; border-color:#7b3fe4;}
-
-  /* standings — full per-round matrix, modeled on FIA F2's standings grid */
-  .standings-loading, .standings-error{font-size:13px; color:var(--muted); text-align:center; padding:30px 0;}
-  .standings-scroll{
-    overflow-x:auto; -webkit-overflow-scrolling:touch;
-    border:1px solid var(--card-border); border-radius:14px; background:var(--card);
-  }
-  .standings-matrix{border-collapse:collapse; width:max-content; min-width:100%;}
-  .standings-matrix th, .standings-matrix td{
-    padding:6px 7px; font-size:11px; text-align:center; white-space:nowrap;
-    border-bottom:1px solid #1e1e22; font-variant-numeric:tabular-nums;
-  }
-  .standings-matrix thead th{
-    color:var(--meta); font-weight:700; border-bottom:1px solid var(--card-border);
-    background:var(--card);
-  }
-  .standings-matrix .round-hdr{font-size:9.5px; line-height:1.35; padding:7px 5px; font-weight:700;}
-  .standings-matrix .round-date{display:block; font-weight:500; color:var(--dim); font-size:9px; margin-top:1px;}
-  .standings-matrix .subhdr{font-size:9px; color:var(--dim); font-weight:700; padding:3px 4px;}
-  .standings-matrix .col-driver{
-    position:sticky; left:0; z-index:2; background:var(--card);
-    text-align:left; width:74px; min-width:74px; max-width:74px;
-    padding-left:10px; padding-right:6px;
-  }
-  .standings-matrix thead .col-driver{z-index:3;}
-  .standings-matrix .col-driver .standings-flag{margin-right:5px;}
-  .standings-matrix .standings-name{font-weight:700; color:var(--text); font-size:12px;}
-  .standings-matrix .col-points{
-    position:sticky; left:74px; z-index:2; background:#1a1a1e;
-    font-weight:800; color:var(--text);
-    box-shadow:2px 0 0 var(--card-border);
-  }
-  .standings-matrix thead .col-points{color:var(--meta); z-index:3;}
-  .standings-matrix .zero{color:var(--dim);}
-  .standings-matrix tbody tr:first-child td{background:rgba(225,6,0,0.07);}
-  .standings-matrix tbody tr:first-child .col-driver{background:#1c1414;}
-  .standings-matrix tbody tr:first-child .col-points{background:#241717;}
-  .standings-legend{font-size:10px; color:var(--muted); margin-top:10px; text-align:right;}
-
-  /* simple flat standings table (F2/F3 — current totals only, no per-round grid) */
-  .standings-simple{width:100%; border-collapse:collapse;}
-  .standings-simple th, .standings-simple td{
-    padding:9px 10px; font-size:12.5px; text-align:left; border-bottom:1px solid #1e1e22;
-  }
-  .standings-simple th{color:var(--meta); font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.4px;}
-  .standings-simple td.pos{color:var(--dim); width:28px; font-variant-numeric:tabular-nums;}
-  .standings-simple td.name{font-weight:700; color:var(--text);}
-  .standings-simple td.team{color:var(--meta); font-size:11.5px;}
-  .standings-simple td.pts{text-align:right; font-weight:800; font-variant-numeric:tabular-nums;}
-  .standings-simple tbody tr:first-child td{background:rgba(225,6,0,0.06);}
+  .chart-title { font-size: 12.5px; font-weight: 800; color: #e8e8ec; margin-bottom: 2px; }
+  .chart-sub { font-size: 10.5px; color: #6f6f78; margin-bottom: 12px; }
+  .chart-wrap { position: relative; height: 260px; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="brand">
-      <img src="icon-192.png" width="22" height="22" alt="" style="border-radius:5px; display:block;">
-      RACE TRACKER
-    </div>
-    <div class="tz">TIMES IN NEW YORK (ET)</div>
-  </header>
-
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="schedule" type="button">Schedule</button>
-    <button class="tab-btn" data-tab="standings" type="button">Standings</button>
-  </nav>
-
-  <div class="panel active" id="panel-schedule">
-    <section class="hero" id="hero">
-      <div class="hero-label" id="hero-label">NEXT UP · F1</div>
-      <div class="hero-race" id="hero-race">—</div>
-      <div class="hero-session" id="hero-session">—</div>
-      <div class="hero-datetime" id="hero-datetime">—</div>
-      <div class="hero-location" id="hero-location">—</div>
-      <div class="hero-weekend" id="hero-weekend"></div>
-      <div class="cd-caption" id="cd-caption"></div>
-      <div class="countdown" id="countdown">
-        <div class="cd-block"><div class="num" id="cd-d">00</div><span class="lab">Days</span></div>
-        <div class="cd-block"><div class="num" id="cd-h">00</div><span class="lab">Hrs</span></div>
-        <div class="cd-block"><div class="num" id="cd-m">00</div><span class="lab">Min</span></div>
-        <div class="cd-block"><div class="num" id="cd-s">00</div><span class="lab">Sec</span></div>
-      </div>
-    </section>
-
-    <div class="sect-title">2026 Season</div>
-    <div id="calendar"></div>
+<div class="app">
+  <div class="topbar">
+    <span class="flag">🏁</span>
+    <h1>RACE TRACKER</h1>
+    <span class="updated" id="updatedStamp"></span>
   </div>
 
-  <div class="panel" id="panel-standings">
-    <nav class="subtabs" id="standings-subtabs">
-      <button class="subtab-btn active" data-series="f1" type="button">F1</button>
-      <button class="subtab-btn" data-series="f2" type="button">F2</button>
-      <button class="subtab-btn" data-series="f3" type="button">F3</button>
-    </nav>
-    <div class="sect-title" id="standings-title">F1 Driver's Championship</div>
-    <div id="standings-body"><div class="standings-loading">Loading standings…</div></div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="schedule">SCHEDULE</button>
+    <button class="tab-btn" data-tab="standings">STANDINGS</button>
   </div>
 
-  <footer>
-    Tap any session to mark it as one you're watching.<br>
-    F1, F2 &amp; F3 2026 season · schedule set at time of publishing, confirm times close to race week in case of official changes.
-  </footer>
+  <div id="scheduleView"></div>
+  <div id="standingsView" style="display:none;"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <script>
-/* ---------- DATA (UTC ISO times) ---------- */
+/* ============================== DATA ============================== */
+/* All times UTC ISO — rendered in America/New_York so DST is handled automatically. */
+
+/* Set by Claude each time meaningful content/design changes are pushed —
+   this is what the topbar "Updated" stamp shows. Standings data itself is
+   fetched live on every visit (see LOAD: STANDINGS below), independent of
+   this date. */
+const LAST_UPDATED_ISO = "2026-07-18";
+
+const SCHEDULE = [
+  { round: 10, name: "Belgian Grand Prix", location: "Spa-Francorchamps", dates: "Jul 17–19", status: "current", sessions: [
+    { id:"f1-10-fp1", series:"F1", label:"Practice 1", t:"2026-07-17T11:30:00Z" },
+    { id:"f1-10-fp2", series:"F1", label:"Practice 2", t:"2026-07-17T15:00:00Z" },
+    { id:"f1-10-fp3", series:"F1", label:"Practice 3", t:"2026-07-18T10:30:00Z" },
+    { id:"f1-10-q",   series:"F1", label:"Qualifying", t:"2026-07-18T14:00:00Z" },
+    { id:"f3-10-fr",  series:"F3", label:"Feature Race", t:"2026-07-19T07:20:00Z" },
+    { id:"f2-10-fr",  series:"F2", label:"Feature Race", t:"2026-07-19T08:40:00Z" },
+    { id:"f1-10-race",series:"F1", label:"Grand Prix", t:"2026-07-19T13:00:00Z" },
+  ]},
+  { round: 11, name: "Hungarian Grand Prix", location: "Budapest", dates: "Jul 24–26", status: "upcoming", sessions: [
+    { id:"f3-11-fp",  series:"F3", label:"Practice", t:"2026-07-24T06:45:00Z" },
+    { id:"f2-11-fp",  series:"F2", label:"Practice", t:"2026-07-24T09:55:00Z" },
+    { id:"f3-11-q",   series:"F3", label:"Qualifying", t:"2026-07-24T09:55:00Z" },
+    { id:"f1-11-fp1", series:"F1", label:"Practice 1", t:"2026-07-24T11:30:00Z" },
+    { id:"f2-11-q",   series:"F2", label:"Qualifying", t:"2026-07-24T13:55:00Z" },
+    { id:"f1-11-fp2", series:"F1", label:"Practice 2", t:"2026-07-24T15:00:00Z" },
+    { id:"f2-11-sr",  series:"F2", label:"Sprint Race", t:"2026-07-25T08:35:00Z" },
+    { id:"f1-11-fp3", series:"F1", label:"Practice 3", t:"2026-07-25T10:30:00Z" },
+    { id:"f1-11-q",   series:"F1", label:"Qualifying", t:"2026-07-25T14:00:00Z" },
+    { id:"f3-11-sr",  series:"F3", label:"Sprint Race", t:"2026-07-25T14:45:00Z" },
+    { id:"f3-11-fr",  series:"F3", label:"Feature Race", t:"2026-07-26T07:20:00Z" },
+    { id:"f2-11-fr",  series:"F2", label:"Feature Race", t:"2026-07-26T08:40:00Z" },
+    { id:"f1-11-race",series:"F1", label:"Grand Prix", t:"2026-07-26T13:00:00Z" },
+  ]},
+  { round: 12, name: "Dutch Grand Prix", location: "Zandvoort", dates: "Aug 21–23", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-12-fp1", series:"F1", label:"Practice 1", t:"2026-08-21T11:30:00Z" },
+    { id:"f1-12-sq",  series:"F1", label:"Sprint Qualifying", t:"2026-08-21T15:00:00Z" },
+    { id:"f1-12-sr",  series:"F1", label:"Sprint", t:"2026-08-22T10:00:00Z" },
+    { id:"f1-12-q",   series:"F1", label:"Qualifying", t:"2026-08-22T14:00:00Z" },
+    { id:"f1-12-race",series:"F1", label:"Grand Prix", t:"2026-08-23T13:00:00Z" },
+  ]},
+  { round: 13, name: "Italian Grand Prix", location: "Monza", dates: "Sep 4–6", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-13-fp1", series:"F1", label:"Practice 1", t:"2026-09-04T11:30:00Z" },
+    { id:"f1-13-fp2", series:"F1", label:"Practice 2", t:"2026-09-04T15:00:00Z" },
+    { id:"f3-13-fr",  series:"F3", label:"Feature Race", t:"2026-09-06T07:20:00Z" },
+    { id:"f2-13-fr",  series:"F2", label:"Feature Race", t:"2026-09-06T08:40:00Z" },
+    { id:"f1-13-race",series:"F1", label:"Grand Prix", t:"2026-09-06T13:00:00Z" },
+  ]},
+  { round: 14, name: "Spanish Grand Prix", location: "Madrid", dates: "Sep 11–13", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-14-fp1", series:"F1", label:"Practice 1", t:"2026-09-11T11:30:00Z" },
+    { id:"f1-14-fp2", series:"F1", label:"Practice 2", t:"2026-09-11T15:00:00Z" },
+    { id:"f3-14-fr",  series:"F3", label:"Feature Race", t:"2026-09-13T07:20:00Z" },
+    { id:"f2-14-fr",  series:"F2", label:"Feature Race", t:"2026-09-13T08:40:00Z" },
+    { id:"f1-14-race",series:"F1", label:"Grand Prix", t:"2026-09-13T13:00:00Z" },
+  ]},
+  { round: 15, name: "Azerbaijan Grand Prix", location: "Baku", dates: "Sep 24–26", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-15-fp1", series:"F1", label:"Practice 1", t:"2026-09-24T09:30:00Z" },
+    { id:"f2-15-fr",  series:"F2", label:"Feature Race", t:"2026-09-26T06:40:00Z" },
+    { id:"f1-15-race",series:"F1", label:"Grand Prix (Sat)", t:"2026-09-26T11:00:00Z" },
+  ]},
+  { round: 16, name: "Singapore Grand Prix", location: "Marina Bay", dates: "Oct 9–11", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-16-fp1", series:"F1", label:"Practice 1", t:"2026-10-09T11:30:00Z" },
+    { id:"f1-16-sq",  series:"F1", label:"Sprint Qualifying", t:"2026-10-09T15:30:00Z" },
+    { id:"f1-16-sr",  series:"F1", label:"Sprint", t:"2026-10-10T11:00:00Z" },
+    { id:"f1-16-q",   series:"F1", label:"Qualifying", t:"2026-10-10T15:00:00Z" },
+    { id:"f1-16-race",series:"F1", label:"Grand Prix", t:"2026-10-11T12:00:00Z" },
+  ]},
+  { round: 17, name: "United States Grand Prix", location: "Austin", dates: "Oct 23–25", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-17-fp1", series:"F1", label:"Practice 1", t:"2026-10-23T18:30:00Z" },
+    { id:"f1-17-q",   series:"F1", label:"Qualifying", t:"2026-10-24T20:00:00Z" },
+    { id:"f1-17-race",series:"F1", label:"Grand Prix", t:"2026-10-25T19:00:00Z" },
+  ]},
+  { round: 18, name: "Mexico City Grand Prix", location: "Mexico City", dates: "Oct 30–Nov 1", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-18-fp1", series:"F1", label:"Practice 1", t:"2026-10-30T19:30:00Z" },
+    { id:"f1-18-q",   series:"F1", label:"Qualifying", t:"2026-10-31T20:00:00Z" },
+    { id:"f1-18-race",series:"F1", label:"Grand Prix", t:"2026-11-01T20:00:00Z" },
+  ]},
+  { round: 19, name: "São Paulo Grand Prix", location: "Interlagos", dates: "Nov 6–8", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-19-fp1", series:"F1", label:"Practice 1", t:"2026-11-06T16:30:00Z" },
+    { id:"f1-19-q",   series:"F1", label:"Qualifying", t:"2026-11-07T18:00:00Z" },
+    { id:"f1-19-race",series:"F1", label:"Grand Prix", t:"2026-11-08T17:00:00Z" },
+  ]},
+  { round: 20, name: "Las Vegas Grand Prix", location: "Las Vegas Strip", dates: "Nov 19–21", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-20-fp1", series:"F1", label:"Practice 1", t:"2026-11-20T04:30:00Z" },
+    { id:"f1-20-q",   series:"F1", label:"Qualifying", t:"2026-11-21T06:00:00Z" },
+    { id:"f1-20-race",series:"F1", label:"Grand Prix", t:"2026-11-22T06:00:00Z" },
+  ]},
+  { round: 21, name: "Qatar Grand Prix", location: "Lusail", dates: "Nov 27–29", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-21-fp1", series:"F1", label:"Practice 1", t:"2026-11-27T13:30:00Z" },
+    { id:"f2-21-fr",  series:"F2", label:"Feature Race", t:"2026-11-29T12:00:00Z" },
+    { id:"f1-21-race",series:"F1", label:"Grand Prix", t:"2026-11-29T14:00:00Z" },
+  ]},
+  { round: 22, name: "Abu Dhabi Grand Prix", location: "Yas Marina", dates: "Dec 4–6", status: "upcoming", estimated: true, sessions: [
+    { id:"f1-22-fp1", series:"F1", label:"Practice 1", t:"2026-12-04T10:30:00Z" },
+    { id:"f2-22-fr",  series:"F2", label:"Feature Race", t:"2026-12-06T11:00:00Z" },
+    { id:"f1-22-race",series:"F1", label:"Grand Prix", t:"2026-12-06T13:00:00Z" },
+  ]},
+];
+
+/* Static per-round metadata used to shape the LIVE F1 standings grid — just
+   round name + whether that round has a sprint (known from the calendar in
+   advance), NOT points data itself (that always comes live from the API). */
 const F1_ROUNDS = [
-{round:1,name:"Australian",location:"Melbourne",sessions:{fp1:"2026-03-06T01:30:00Z",fp2:"2026-03-06T05:00:00Z",fp3:"2026-03-07T01:30:00Z",qualifying:"2026-03-07T05:00:00Z",gp:"2026-03-08T04:00:00Z"}},
-{round:2,name:"Chinese",location:"Shanghai",sessions:{fp1:"2026-03-13T03:30:00Z",sprintQualifying:"2026-03-13T07:30:00Z",sprint:"2026-03-14T03:00:00Z",qualifying:"2026-03-14T07:00:00Z",gp:"2026-03-15T07:00:00Z"}},
-{round:3,name:"Japanese",location:"Suzuka",sessions:{fp1:"2026-03-27T02:30:00Z",fp2:"2026-03-27T06:00:00Z",fp3:"2026-03-28T02:30:00Z",qualifying:"2026-03-28T06:00:00Z",gp:"2026-03-29T05:00:00Z"}},
-{round:4,name:"Miami",location:"Miami",sessions:{fp1:"2026-05-01T16:00:00Z",sprintQualifying:"2026-05-01T20:30:00Z",sprint:"2026-05-02T16:00:00Z",qualifying:"2026-05-02T20:00:00Z",gp:"2026-05-03T17:00:00Z"}},
-{round:5,name:"Canadian",location:"Montreal",sessions:{fp1:"2026-05-22T16:30:00Z",sprintQualifying:"2026-05-22T20:30:00Z",sprint:"2026-05-23T16:00:00Z",qualifying:"2026-05-23T20:00:00Z",gp:"2026-05-24T20:00:00Z"}},
-{round:6,name:"Monaco",location:"Monte Carlo",sessions:{fp1:"2026-06-05T11:30:00Z",fp2:"2026-06-05T15:00:00Z",fp3:"2026-06-06T10:30:00Z",qualifying:"2026-06-06T14:00:00Z",gp:"2026-06-07T13:00:00Z"}},
-{round:7,name:"Barcelona-Catalunya",location:"Barcelona",sessions:{fp1:"2026-06-12T11:30:00Z",fp2:"2026-06-12T15:00:00Z",fp3:"2026-06-13T10:30:00Z",qualifying:"2026-06-13T14:00:00Z",gp:"2026-06-14T13:00:00Z"}},
-{round:8,name:"Austrian",location:"Spielberg",sessions:{fp1:"2026-06-26T11:30:00Z",fp2:"2026-06-26T15:00:00Z",fp3:"2026-06-27T10:30:00Z",qualifying:"2026-06-27T14:00:00Z",gp:"2026-06-28T13:00:00Z"}},
-{round:9,name:"British",location:"Silverstone",sessions:{fp1:"2026-07-03T11:30:00Z",sprintQualifying:"2026-07-03T15:30:00Z",sprint:"2026-07-04T11:00:00Z",qualifying:"2026-07-04T15:00:00Z",gp:"2026-07-05T14:00:00Z"}},
-{round:10,name:"Belgian",location:"Spa-Francorchamps",sessions:{fp1:"2026-07-17T11:30:00Z",fp2:"2026-07-17T15:00:00Z",fp3:"2026-07-18T10:30:00Z",qualifying:"2026-07-18T14:00:00Z",gp:"2026-07-19T13:00:00Z"}},
-{round:11,name:"Hungarian",location:"Budapest",sessions:{fp1:"2026-07-24T11:30:00Z",fp2:"2026-07-24T15:00:00Z",fp3:"2026-07-25T10:30:00Z",qualifying:"2026-07-25T14:00:00Z",gp:"2026-07-26T13:00:00Z"}},
-{round:12,name:"Dutch",location:"Zandvoort",sessions:{fp1:"2026-08-21T10:30:00Z",sprintQualifying:"2026-08-21T14:30:00Z",sprint:"2026-08-22T10:00:00Z",qualifying:"2026-08-22T14:00:00Z",gp:"2026-08-23T13:00:00Z"}},
-{round:13,name:"Italian",location:"Monza",sessions:{fp1:"2026-09-04T10:30:00Z",fp2:"2026-09-04T14:00:00Z",fp3:"2026-09-05T10:30:00Z",qualifying:"2026-09-05T14:00:00Z",gp:"2026-09-06T13:00:00Z"}},
-{round:14,name:"Spanish",location:"Madrid",sessions:{fp1:"2026-09-11T11:30:00Z",fp2:"2026-09-11T15:00:00Z",fp3:"2026-09-12T10:30:00Z",qualifying:"2026-09-12T14:00:00Z",gp:"2026-09-13T13:00:00Z"}},
-{round:15,name:"Azerbaijan",location:"Baku",sessions:{fp1:"2026-09-24T08:30:00Z",fp2:"2026-09-24T12:00:00Z",fp3:"2026-09-25T08:30:00Z",qualifying:"2026-09-25T12:00:00Z",gp:"2026-09-26T11:00:00Z"}},
-{round:16,name:"Singapore",location:"Singapore",sessions:{fp1:"2026-10-09T08:30:00Z",sprintQualifying:"2026-10-09T12:30:00Z",sprint:"2026-10-10T09:00:00Z",qualifying:"2026-10-10T13:00:00Z",gp:"2026-10-11T12:00:00Z"}},
-{round:17,name:"United States",location:"Austin",sessions:{fp1:"2026-10-23T17:30:00Z",fp2:"2026-10-23T21:00:00Z",fp3:"2026-10-24T17:30:00Z",qualifying:"2026-10-24T21:00:00Z",gp:"2026-10-25T20:00:00Z"}},
-{round:18,name:"Mexican",location:"Mexico City",sessions:{fp1:"2026-10-30T18:30:00Z",fp2:"2026-10-30T22:00:00Z",fp3:"2026-10-31T17:30:00Z",qualifying:"2026-10-31T21:00:00Z",gp:"2026-11-01T20:00:00Z"}},
-{round:19,name:"Brazilian",location:"Sao Paulo",sessions:{fp1:"2026-11-06T15:30:00Z",fp2:"2026-11-06T19:00:00Z",fp3:"2026-11-07T14:30:00Z",qualifying:"2026-11-07T18:00:00Z",gp:"2026-11-08T17:00:00Z"}},
-{round:20,name:"Las Vegas",location:"Las Vegas",sessions:{fp1:"2026-11-20T00:30:00Z",fp2:"2026-11-20T04:00:00Z",fp3:"2026-11-21T00:30:00Z",qualifying:"2026-11-21T04:00:00Z",gp:"2026-11-22T04:00:00Z"}},
-{round:21,name:"Qatar",location:"Doha",sessions:{fp1:"2026-11-27T13:30:00Z",fp2:"2026-11-27T17:00:00Z",fp3:"2026-11-28T14:30:00Z",qualifying:"2026-11-28T18:00:00Z",gp:"2026-11-29T16:00:00Z"}},
-{round:22,name:"Abu Dhabi",location:"Yas Marina",sessions:{fp1:"2026-12-04T09:30:00Z",fp2:"2026-12-04T13:00:00Z",fp3:"2026-12-05T10:30:00Z",qualifying:"2026-12-05T14:00:00Z",gp:"2026-12-06T13:00:00Z"}}
+  { name:"Australia", sprint:false }, { name:"China", sprint:true }, { name:"Japan", sprint:false },
+  { name:"Miami", sprint:true }, { name:"Canada", sprint:true }, { name:"Monaco", sprint:false },
+  { name:"Barcelona", sprint:false }, { name:"Austria", sprint:false }, { name:"Silverstone", sprint:true },
+  { name:"Belgium", sprint:false }, { name:"Hungary", sprint:false }, { name:"Netherlands", sprint:true },
+  { name:"Italy", sprint:false }, { name:"Spain", sprint:false }, { name:"Azerbaijan", sprint:false },
+  { name:"Singapore", sprint:true }, { name:"United States", sprint:false }, { name:"Mexico", sprint:false },
+  { name:"Brazil", sprint:false }, { name:"Las Vegas", sprint:false }, { name:"Qatar", sprint:false },
+  { name:"Abu Dhabi", sprint:false },
 ];
-
-const F2_ROUNDS = [
-{round:1,name:"Australian",location:"Melbourne",sessions:{practice:"2026-03-05T23:00:00Z",qualifying:"2026-03-06T03:55:00Z",sprint:"2026-03-07T03:30:00Z",feature:"2026-03-08T00:25:00Z"}},
-{round:2,name:"Miami",location:"Miami",sessions:{practice:"2026-05-01T13:30:00Z",qualifying:"2026-05-01T18:30:00Z",sprint:"2026-05-02T14:00:00Z",feature:"2026-05-03T13:25:00Z"}},
-{round:3,name:"Canada",location:"Montréal",sessions:{practice:"2026-05-22T14:05:00Z",qualifying:"2026-05-22T18:00:00Z",sprint:"2026-05-23T18:10:00Z",feature:"2026-05-24T16:05:00Z"}},
-{round:4,name:"Monaco",location:"Monte Carlo",sessions:{practice:"2026-06-04T13:00:00Z",qualifying:"2026-06-05T13:10:00Z",sprint:"2026-06-06T12:15:00Z",feature:"2026-06-07T07:35:00Z"}},
-{round:5,name:"Spanish",location:"Barcelona",sessions:{practice:"2026-06-12T09:55:00Z",qualifying:"2026-06-12T13:55:00Z",sprint:"2026-06-13T08:35:00Z",feature:"2026-06-14T08:40:00Z"}},
-{round:6,name:"Austrian",location:"Spielberg",sessions:{practice:"2026-06-26T09:55:00Z",qualifying:"2026-06-26T13:55:00Z",sprint:"2026-06-27T08:35:00Z",feature:"2026-06-28T08:40:00Z"}},
-{round:7,name:"British",location:"Silverstone",sessions:{practice:"2026-07-03T10:55:00Z",qualifying:"2026-07-03T14:55:00Z",sprint:"2026-07-04T09:35:00Z",feature:"2026-07-05T09:40:00Z"}},
-{round:8,name:"Belgian",location:"Spa-Francorchamps",sessions:{practice:"2026-07-17T09:55:00Z",qualifying:"2026-07-17T13:55:00Z",sprint:"2026-07-18T08:35:00Z",feature:"2026-07-19T08:40:00Z"}},
-{round:9,name:"Hungarian",location:"Budapest",sessions:{practice:"2026-07-24T09:55:00Z",qualifying:"2026-07-24T13:55:00Z",sprint:"2026-07-25T08:35:00Z",feature:"2026-07-26T08:40:00Z"}},
-{round:10,name:"Italian",location:"Monza",sessions:{practice:"2026-09-04T09:55:00Z",qualifying:"2026-09-04T13:55:00Z",sprint:"2026-09-05T08:35:00Z",feature:"2026-09-06T08:40:00Z"}},
-{round:11,name:"Spanish",location:"Madrid",sessions:{practice:"2026-09-11T09:55:00Z",qualifying:"2026-09-11T13:55:00Z",sprint:"2026-09-12T08:35:00Z",feature:"2026-09-13T08:40:00Z"}},
-{round:12,name:"Azerbaijan",location:"Baku",sessions:{practice:"2026-09-24T07:55:00Z",qualifying:"2026-09-24T11:55:00Z",sprint:"2026-09-25T07:35:00Z",feature:"2026-09-26T07:40:00Z"}},
-{round:13,name:"Qatar",location:"Doha",sessions:{practice:"2026-11-27T08:55:00Z",qualifying:"2026-11-27T12:55:00Z",sprint:"2026-11-28T07:35:00Z",feature:"2026-11-29T07:40:00Z"}},
-{round:14,name:"Abu Dhabi",location:"Yas Marina",sessions:{practice:"2026-12-04T07:55:00Z",qualifying:"2026-12-04T11:55:00Z",sprint:"2026-12-05T06:35:00Z",feature:"2026-12-06T06:40:00Z"}}
-];
-
-const F3_ROUNDS = [
-{round:1,name:"Australian",location:"Melbourne",sessions:{practice:"2026-03-05T21:50:00Z",qualifying:"2026-03-06T03:00:00Z",sprint:"2026-03-07T00:15:00Z",feature:"2026-03-07T21:50:00Z"}},
-{round:2,name:"Monaco",location:"Monte Carlo",sessions:{practice:"2026-06-04T11:25:00Z",qualifying:"2026-06-05T08:05:00Z",sprint:"2026-06-06T08:45:00Z",feature:"2026-06-07T05:55:00Z"}},
-{round:3,name:"Spanish",location:"Catalunya",sessions:{practice:"2026-06-12T06:45:00Z",qualifying:"2026-06-12T09:55:00Z",sprint:"2026-06-13T14:45:00Z",feature:"2026-06-14T07:20:00Z"}},
-{round:4,name:"Austrian",location:"Spielberg",sessions:{practice:"2026-06-26T06:45:00Z",qualifying:"2026-06-26T09:55:00Z",sprint:"2026-06-27T14:45:00Z",feature:"2026-06-28T07:20:00Z"}},
-{round:5,name:"British",location:"Silverstone",sessions:{practice:"2026-07-03T07:45:00Z",qualifying:"2026-07-03T10:55:00Z",sprint:"2026-07-04T15:45:00Z",feature:"2026-07-05T08:20:00Z"}},
-{round:6,name:"Belgian",location:"Spa-Francorchamps",sessions:{practice:"2026-07-17T06:45:00Z",qualifying:"2026-07-17T09:55:00Z",sprint:"2026-07-18T14:45:00Z",feature:"2026-07-19T07:20:00Z"}},
-{round:7,name:"Hungarian",location:"Budapest",sessions:{practice:"2026-07-24T06:45:00Z",qualifying:"2026-07-24T09:55:00Z",sprint:"2026-07-25T14:45:00Z",feature:"2026-07-26T07:20:00Z"}},
-{round:8,name:"Italian",location:"Monza",sessions:{practice:"2026-09-04T06:45:00Z",qualifying:"2026-09-04T13:00:00Z",sprint:"2026-09-05T14:45:00Z",feature:"2026-09-06T07:20:00Z"}},
-{round:9,name:"Spanish",location:"Madrid",sessions:{practice:"2026-09-11T06:45:00Z",qualifying:"2026-09-11T09:55:00Z",sprint:"2026-09-12T14:45:00Z",feature:"2026-09-13T07:20:00Z"}}
-];
-
-const F1_SESSION_ORDER = [
-  ["fp1","Practice 1"],["fp2","Practice 2"],["fp3","Practice 3"],
-  ["sprintQualifying","Sprint Qualifying"],["sprint","Sprint"],
-  ["qualifying","Qualifying"],["gp","Race"]
-];
-const F2_SESSION_ORDER = [
-  ["practice","Practice"],["qualifying","Qualifying"],
-  ["sprint","Sprint Race"],["feature","Feature Race"]
-];
-const F3_SESSION_ORDER = [
-  ["practice","Practice"],["qualifying","Qualifying"],
-  ["sprint","Sprint Race"],["feature","Feature Race"]
-];
-
-// a few venues are named differently across F1/F2/F3 feeds despite being the same location
-const LOCATION_ALIASES = { "catalunya": "barcelona" };
-
-function norm(s){
-  const n = s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
-  return LOCATION_ALIASES[n] || n;
-}
-
-/* merge F1 rounds with matching F2/F3 rounds by normalized location */
-const merged = F1_ROUNDS.map(r1 => {
-  const r2 = F2_ROUNDS.find(x => norm(x.location) === norm(r1.location));
-  const r3 = F3_ROUNDS.find(x => norm(x.location) === norm(r1.location));
-  return {
-    round: r1.round,
-    name: r1.name,
-    location: r1.location,
-    f1: r1.sessions,
-    f2: r2 ? r2.sessions : null,
-    f3: r3 ? r3.sessions : null
-  };
-});
-
-/* ---------- time formatting (America/New_York) ---------- */
-const dtFmt = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",weekday:"short",month:"short",day:"numeric"});
-const tFmt = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit"});
-const monthDayFmt = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",month:"short",day:"numeric"});
-const monthFmt = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",month:"short"});
-const dayFmt = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",day:"numeric"});
-
-function fmtDate(d){ return dtFmt.format(d); }
-function fmtTime(d){ return tFmt.format(d); }
-function fmtDateRange(start, end){
-  const sameMonth = monthFmt.format(start) === monthFmt.format(end);
-  if(sameMonth){
-    return monthFmt.format(start) + " " + dayFmt.format(start) + "–" + dayFmt.format(end);
-  }
-  return monthDayFmt.format(start) + "–" + monthDayFmt.format(end);
-}
-
-/* ---------- "watching" selections (persisted on-device) ---------- */
-const SELECTED_KEY = "raceTrackerSelectedSessions";
-function loadSelected(){
-  try{ return new Set(JSON.parse(localStorage.getItem(SELECTED_KEY) || "[]")); }
-  catch(e){ return new Set(); }
-}
-function saveSelected(){
-  try{ localStorage.setItem(SELECTED_KEY, JSON.stringify([...selectedSessions])); }
-  catch(e){}
-}
-const selectedSessions = loadSelected();
-
-function toggleSession(id){
-  if(selectedSessions.has(id)) selectedSessions.delete(id);
-  else selectedSessions.add(id);
-  saveSelected();
-  const isSel = selectedSessions.has(id);
-  document.querySelectorAll('[data-id="' + id + '"]').forEach(el => {
-    el.classList.toggle("selected", isSel);
-  });
-}
-
-function handleSessClick(e){
-  const row = e.target.closest(".sess-row");
-  if(!row) return;
-  const id = row.getAttribute("data-id");
-  if(!id) return;
-  toggleSession(id);
-}
-
-/* ---------- next F1 session across whole season ---------- */
-function getAllF1Sessions(){
-  const list = [];
-  merged.forEach(r=>{
-    F1_SESSION_ORDER.forEach(([key,label])=>{
-      if(r.f1[key]){
-        list.push({round:r, key, label, date:new Date(r.f1[key])});
-      }
-    });
-  });
-  return list.sort((a,b)=>a.date-b.date);
-}
-
-let nextSession = null;
-let liveSession = null; // if currently within ~3hrs after start, treat as "live-ish" fallback
-
-function computeNext(){
-  const now = new Date();
-  const all = getAllF1Sessions();
-  nextSession = all.find(s => s.date > now) || null;
-}
-
-function renderHero(){
-  const now = new Date();
-  if(!nextSession){
-    document.getElementById("hero-race").textContent = "Season complete";
-    document.getElementById("hero-session").textContent = "See you next year";
-    document.getElementById("hero-datetime").textContent = "";
-    document.getElementById("hero-location").textContent = "";
-    document.getElementById("hero-weekend").innerHTML = "";
-    document.getElementById("cd-caption").textContent = "";
-    document.getElementById("countdown").style.display = "none";
-    return;
-  }
-  const r = nextSession.round;
-  document.getElementById("hero-label").textContent = "NEXT UP · F1";
-  document.getElementById("hero-race").textContent = r.name + " Grand Prix";
-  document.getElementById("hero-session").textContent = nextSession.label;
-  document.getElementById("hero-datetime").innerHTML =
-    fmtDate(nextSession.date) + " · " + fmtTime(nextSession.date) + '<span class="et">ET</span>';
-  document.getElementById("hero-location").textContent = r.location;
-  document.getElementById("hero-weekend").innerHTML =
-    buildSessList("Race Weekend", r.round, r.f1, F1_SESSION_ORDER, now, nextSession.key);
-  document.getElementById("cd-caption").textContent = "Countdown to " + nextSession.label;
-}
-
-function pad(n){ return String(n).padStart(2,"0"); }
-
-function tickCountdown(){
-  if(!nextSession) return;
-  const now = new Date();
-  let diff = nextSession.date - now;
-  const hero = document.getElementById("hero");
-  if(diff <= 0){
-    // session has started/passed; recompute next
-    computeNext();
-    renderHero();
-    renderCalendar();
-    diff = nextSession ? nextSession.date - now : 0;
-  }
-  const d = Math.floor(diff / 86400000);
-  const h = Math.floor((diff % 86400000) / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  document.getElementById("cd-d").textContent = pad(d);
-  document.getElementById("cd-h").textContent = pad(h);
-  document.getElementById("cd-m").textContent = pad(m);
-  document.getElementById("cd-s").textContent = pad(s);
-}
-
-/* ---------- calendar ---------- */
-function renderCalendar(){
-  const now = new Date();
-  const container = document.getElementById("calendar");
-  container.innerHTML = "";
-
-  // only show rounds that haven't finished yet (final F1 session still ahead)
-  const upcoming = merged.filter(r => new Date(r.f1.gp) > now);
-
-  upcoming.forEach((r, idx) => {
-    const card = document.createElement("div");
-    const status = idx === 0 ? "next" : "upcoming";
-    card.className = "round-card " + status;
-    card.id = "round-" + r.round;
-
-    const firstDate = r.f2 ? new Date(Math.min(new Date(r.f1.fp1 || r.f1.fp2), new Date(r.f2.practice))) : new Date(r.f1.fp1 || r.f1.fp2);
-    const lastDate = new Date(r.f1.gp);
-    const dateRange = fmtDateRange(firstDate, lastDate);
-
-    const badgeLabel = status === "next" ? "Next" : "Upcoming";
-
-    let html = `
-      <div class="round-head">
-        <div class="round-name">${r.name} Grand Prix</div>
-        <div class="round-badge ${status}">${badgeLabel}</div>
-      </div>
-      <div class="round-meta">
-        <span class="round-dates">${dateRange}</span>
-        <span class="round-loc">${r.location}</span>
-      </div>
-    `;
-
-    html += buildMixedSessList(r, now);
-
-    card.innerHTML = html;
-    container.appendChild(card);
-  });
-
-  return upcoming.length ? upcoming[0].round : null;
-}
-
-/* combine F1 + F2 sessions for a round into one chronological, tagged list */
-function buildMixedSessList(r, now){
-  const rows = [];
-  F1_SESSION_ORDER.forEach(([key,label])=>{
-    if(r.f1[key]) rows.push({tag:"F1", key, label, date:new Date(r.f1[key])});
-  });
-  if(r.f2){
-    F2_SESSION_ORDER.forEach(([key,label])=>{
-      if(r.f2[key]) rows.push({tag:"F2", key, label, date:new Date(r.f2[key])});
-    });
-  }
-  if(r.f3){
-    F3_SESSION_ORDER.forEach(([key,label])=>{
-      if(r.f3[key]) rows.push({tag:"F3", key, label, date:new Date(r.f3[key])});
-    });
-  }
-  rows.sort((a,b)=>a.date-b.date);
-
-  let html = "";
-  rows.forEach(row=>{
-    const isPast = row.date < now;
-    const id = r.round + "_" + row.tag + "_" + row.key;
-    const isSel = selectedSessions.has(id);
-    const seriesClass = row.tag.toLowerCase();
-    // "Race" is ambiguous next to F2's "Feature Race" in a mixed list — use the full F1 term here
-    const displayLabel = (row.tag === "F1" && row.key === "gp") ? "Grand Prix" : row.label;
-    html += `
-      <div class="sess-row ${seriesClass} ${isPast ? 'past' : ''} ${isSel ? 'selected' : ''}" data-id="${id}">
-        <div class="sess-name"><span class="tag ${seriesClass}">${row.tag}</span> ${displayLabel}</div>
-        <div class="sess-when">${fmtDate(row.date)} · ${fmtTime(row.date)}</div>
-      </div>
-    `;
-  });
-  return `<div class="sess-list">${html}</div>`;
-}
-
-/* hero: F1-only weekend list (kept separate from the mixed calendar view) */
-function buildSessList(seriesLabel, roundNumber, sessions, order, now, nextKey){
-  let rows = "";
-  order.forEach(([key,label])=>{
-    if(!sessions[key]) return;
-    const d = new Date(sessions[key]);
-    const isPast = d < now;
-    const isNext = key === nextKey;
-    const id = roundNumber + "_F1_" + key;
-    const isSel = selectedSessions.has(id);
-    rows += `
-      <div class="sess-row f1 ${isPast ? 'past' : ''} ${isNext ? 'is-next' : ''} ${isSel ? 'selected' : ''}" data-id="${id}">
-        <div class="sess-name">${label}${isNext ? ' <span class="tag next">NEXT</span>' : ''}</div>
-        <div class="sess-when">${fmtDate(d)} · ${fmtTime(d)}</div>
-      </div>
-    `;
-  });
-  return `<div class="series-row"><div class="series-label">${seriesLabel}</div><div class="sess-list">${rows}</div></div>`;
-}
-
-/* ---------- default scroll: land on the race after the next one ---------- */
-function scrollToDefault(nextRoundNumber){
-  if(nextRoundNumber == null) return;
-  const nextIdxInSeason = merged.findIndex(r => r.round === nextRoundNumber);
-  const targetRound = merged[nextIdxInSeason + 1];
-  if(!targetRound) return;
-  const el = document.getElementById("round-" + targetRound.round);
-  if(el){
-    // leave a little room so the section title peeks above it
-    const y = el.getBoundingClientRect().top + window.pageYOffset - 44;
-    window.scrollTo({top: Math.max(0, y), behavior: "auto"});
-  }
-}
-
-/* ---------- init ---------- */
-computeNext();
-renderHero();
-const nextRoundNumberAtLoad = renderCalendar();
-tickCountdown();
-setInterval(tickCountdown, 1000);
-
-document.getElementById("calendar").addEventListener("click", handleSessClick);
-document.getElementById("hero-weekend").addEventListener("click", handleSessClick);
-
-window.addEventListener("load", () => {
-  setTimeout(() => scrollToDefault(nextRoundNumberAtLoad), 50);
-});
-
-/* ---------- tabs ---------- */
-const tabButtons = document.querySelectorAll(".tab-btn");
-tabButtons.forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    tabButtons.forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
-    if(btn.dataset.tab === "standings" && !standingsLoaded.f1){
-      loadStandings();
-    }
-  });
-});
-
-/* ---------- standings sub-tabs (F1 live API / F2 & F3 live FIA scrape) ---------- */
-const STANDINGS_TITLES = {
-  f1: "F1 Driver's Championship",
-  f2: "F2 Driver's Championship",
-  f3: "F3 Driver's Championship"
-};
-let activeStandingsSeries = "f1";
-const f2f3Cache = { f2: null, f3: null };
-
-document.getElementById("standings-subtabs").addEventListener("click", (e)=>{
-  const btn = e.target.closest(".subtab-btn");
-  if(!btn) return;
-  const series = btn.dataset.series;
-  if(series === activeStandingsSeries) return;
-  activeStandingsSeries = series;
-  document.querySelectorAll(".subtab-btn").forEach(b=>b.classList.toggle("active", b === btn));
-  document.getElementById("standings-title").textContent = STANDINGS_TITLES[series];
-
-  if(series === "f1"){
-    if(standingsLoaded.f1) renderF1StandingsFromCache();
-    else loadStandings();
-  } else {
-    if(f2f3Cache[series]) renderSimpleStandings(series, f2f3Cache[series]);
-    else loadF2F3Standings(series);
-  }
-});
-
-function renderSimpleStandings(series, list){
-  const body = document.getElementById("standings-body");
-  if(!list || !list.length){
-    body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
-    return;
-  }
-  const rows = list.map(d => `
-    <tr>
-      <td class="pos">${d.position}</td>
-      <td class="name">${d.name}</td>
-      <td class="team">${d.team || ""}</td>
-      <td class="pts">${d.points}</td>
-    </tr>
-  `).join("");
-  body.innerHTML = `
-    <table class="standings-simple">
-      <thead><tr><th></th><th>Driver</th><th>Team</th><th style="text-align:right;">Points</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-async function loadF2F3Standings(series){
-  const body = document.getElementById("standings-body");
-  body.innerHTML = '<div class="standings-loading">Loading standings…</div>';
-  try{
-    const res = await fetch("/.netlify/functions/get-f2f3-standings");
-    if(!res.ok) throw new Error("f2/f3 standings fetch failed");
-    const json = await res.json();
-    f2f3Cache.f2 = json.f2;
-    f2f3Cache.f3 = json.f3;
-    // series may have changed while this was in flight (user tapped the other tab) — only render if still relevant
-    if(activeStandingsSeries === series) renderSimpleStandings(series, json[series]);
-  }catch(e){
-    console.error("F2/F3 standings load failed:", e);
-    if(activeStandingsSeries === series){
-      body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
-    }
-  }
-}
-
-/* ---------- F1 driver standings (live, simplified vs. FIA's per-round grid) ---------- */
 const NATIONALITY_FLAGS = {
   "British":"🇬🇧","Dutch":"🇳🇱","Monegasque":"🇲🇨","Spanish":"🇪🇸","Mexican":"🇲🇽",
   "Australian":"🇦🇺","French":"🇫🇷","German":"🇩🇪","Finnish":"🇫🇮","Canadian":"🇨🇦",
@@ -728,108 +333,425 @@ const NATIONALITY_FLAGS = {
   "Indonesian":"🇮🇩","Indian":"🇮🇳","South African":"🇿🇦"
 };
 
-let standingsLoaded = { f1: false };
-let f1StandingsHtml = "";
-
-function renderF1StandingsFromCache(){
-  document.getElementById("standings-body").innerHTML = f1StandingsHtml;
+/* ============================== STATE ============================== */
+let highlights = [];
+try { highlights = JSON.parse(localStorage.getItem("f1tracker_highlights") || "[]"); } catch(e) { highlights = []; }
+function saveHighlights(){ localStorage.setItem("f1tracker_highlights", JSON.stringify(highlights)); }
+function toggleHighlight(id){
+  const i = highlights.indexOf(id);
+  if (i >= 0) highlights.splice(i,1); else highlights.push(id);
+  saveHighlights();
+  renderSchedule();
+}
+let expandedRounds = new Set();
+function toggleRoundExpand(round){
+  if (expandedRounds.has(round)) expandedRounds.delete(round); else expandedRounds.add(round);
+  renderSchedule();
 }
 
-async function loadStandings(){
-  const body = document.getElementById("standings-body");
-  body.innerHTML = '<div class="standings-loading">Loading standings…</div>';
+/* ============================== HELPERS ============================== */
+const ET_OPTS_TIME = { timeZone:"America/New_York", hour:"numeric", minute:"2-digit", hour12:true };
+const ET_OPTS_DATE = { timeZone:"America/New_York", weekday:"short", month:"short", day:"numeric" };
+function fmtTime(iso){ return new Date(iso).toLocaleTimeString("en-US", ET_OPTS_TIME) + " ET"; }
+function fmtDateTime(iso){ return new Date(iso).toLocaleDateString("en-US", ET_OPTS_DATE) + " · " + new Date(iso).toLocaleTimeString("en-US", ET_OPTS_TIME) + " ET"; }
+function allSessionsFlat(){
+  const out = [];
+  SCHEDULE.forEach(r => r.sessions.forEach(s => out.push({...s, round:r})));
+  return out;
+}
+function nextSession(list){
+  const now = Date.now();
+  const upcoming = list.filter(s => new Date(s.t).getTime() > now).sort((a,b)=> new Date(a.t)-new Date(b.t));
+  return upcoming[0] || null;
+}
+function heroTarget(){
+  const flat = allSessionsFlat();
+  const starred = flat.filter(s => highlights.includes(s.id));
+  return nextSession(starred.length ? starred : flat);
+}
+
+/* ============================== RENDER: SCHEDULE ============================== */
+function renderSchedule(){
+  const target = heroTarget();
+  const view = document.getElementById("scheduleView");
+  if (!target){ view.innerHTML = "<div class='section-hint' style='margin-top:20px;'>No more upcoming sessions this season.</div>"; return; }
+
+  const isStarredTarget = highlights.includes(target.id);
+  const round = target.round;
+  const roundNextUnfinished = nextSession(round.sessions);
+
+  function sessRow(s, opts){
+    const done = new Date(s.t).getTime() < Date.now();
+    const isNext = opts && opts.isNext;
+    const starred = highlights.includes(s.id);
+    return `<div class="sess-row sess-${s.series.toLowerCase()} ${done?"done":""} ${isNext?"next":""} ${starred?"starred":""}" onclick="toggleHighlight('${s.id}')">
+      <span class="sess-check">${starred ? "✓" : ""}</span>
+      <span class="sess-chip chip-${s.series.toLowerCase()}">${s.series}</span>
+      <span class="sess-label">${isNext ? '<span class="next-badge">NEXT</span>' : ""}${s.label}</span>
+      <span class="sess-time">${fmtDateTime(s.t)}</span>
+    </div>`;
+  }
+
+  let html = "";
+  html += `<div class="hero" id="heroCard">
+    <div class="hero-eyebrow">${isStarredTarget ? "YOUR NEXT STARRED SESSION" : "NEXT UP"} · ${target.series}</div>
+    <div class="hero-title">${round.name}</div>
+    <div class="hero-loc">${round.location}${round.estimated ? " · times estimated, confirmed weekly" : ""}</div>
+    <div class="hero-when">${fmtDateTime(target.t)}</div>
+    <div class="cd-label">Countdown</div>
+    <div class="cd-grid" id="cdGrid">
+      <div class="cd-cell"><div class="cd-num" id="cdD">--</div><div class="cd-unit">DAYS</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdH">--</div><div class="cd-unit">HRS</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdM">--</div><div class="cd-unit">MIN</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdS">--</div><div class="cd-unit">SEC</div></div>
+    </div>
+    <div class="cd-target">${isStarredTarget
+      ? `Counting down to your starred session: <b>${target.label} — ${round.name}</b>`
+      : `Counting down to <b>${target.label} — ${round.name}</b>`}</div>
+  </div>`;
+
+  html += `<div class="section-title">${round.name.toUpperCase()} WEEKEND</div>`;
+  html += `<div class="weekend-list">`;
+  round.sessions.forEach(s => {
+    const isNext = roundNextUnfinished && s.id === roundNextUnfinished.id;
+    html += sessRow(s, { isNext });
+  });
+  html += `</div>`;
+
+  html += `<div class="section-title">2026 SEASON</div>`;
+  SCHEDULE.forEach(r => {
+    if (r.round === round.round){ return; } /* avoid repeating the hero's round below */
+    const allDone = r.sessions.every(s => new Date(s.t).getTime() < Date.now());
+    const anyDone = r.sessions.some(s => new Date(s.t).getTime() < Date.now());
+    const isCurrentHero = r.status === "current" || r.round === round.round;
+
+    if (allDone && !expandedRounds.has(r.round)){
+      html += `<div class="round-compact" onclick="toggleRoundExpand(${r.round})">
+        <div>
+          <div class="rc-name">${r.name}</div>
+          <div class="rc-meta">${r.dates} · ${r.location} · COMPLETE</div>
+        </div>
+        <span class="rc-chevron">▸ ${r.sessions.length} sessions</span>
+      </div>`;
+      return;
+    }
+
+    let badge = "badge-upcoming", badgeText = "UPCOMING";
+    if (allDone){ badge = "badge-done"; badgeText = "COMPLETE"; }
+    else if (anyDone){ badge = "badge-live"; badgeText = "LIVE"; }
+    else if (isCurrentHero){ badge = "badge-next"; badgeText = "NEXT"; }
+
+    html += `<div class="round-card ${allDone ? "round-compact-expanded" : ""}">
+      <div class="round-head" ${allDone ? `onclick="toggleRoundExpand(${r.round})" style="cursor:pointer;"` : ""}>
+        <div><div class="round-name">${r.name}</div><div class="round-meta">${r.dates} · ${r.location}</div></div>
+        <span class="round-badge ${badge}">${badgeText}${allDone ? " ▾" : ""}</span>
+      </div>
+      <div class="weekend-list">`;
+    r.sessions.forEach(s => { html += sessRow(s, {}); });
+    html += `</div></div>`;
+  });
+
+  view.innerHTML = html;
+  tickCountdown();
+}
+
+let countdownTimer = null;
+function tickCountdown(){
+  if (countdownTimer) clearInterval(countdownTimer);
+  function update(){
+    const target = heroTarget();
+    if (!target) return;
+    const diff = Math.max(0, new Date(target.t).getTime() - Date.now());
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const dEl=document.getElementById("cdD"), hEl=document.getElementById("cdH"), mEl=document.getElementById("cdM"), sEl=document.getElementById("cdS");
+    if (dEl){ dEl.textContent=String(d).padStart(2,"0"); hEl.textContent=String(h).padStart(2,"0"); mEl.textContent=String(m).padStart(2,"0"); sEl.textContent=String(s).padStart(2,"0"); }
+  }
+  update();
+  countdownTimer = setInterval(update, 1000);
+}
+
+/* ============================== LOAD: STANDINGS (live) ============================== */
+/* F1 comes from the public jolpi.ca (Ergast-successor) API. F2/F3 come from
+   our own Netlify function, which scrapes FIA's official standings pages.
+   Each series is fetched once, lazily, the first time its tab is opened,
+   then cached in these row arrays for the rest of the visit. Row shape
+   matches what renderStandings()/renderCharts() expect:
+     F1: [name, flag, team, [sr,r] × 22 rounds, points]
+     F2/F3: [name, flag, [sr,fr] × N rounds, points]  (flag left blank — the
+       live scrape has no nationality data) */
+let F1_STANDINGS = null, F2_STANDINGS = null, F3_STANDINGS = null;
+let F2_ROUND_NAMES = [], F3_ROUND_NAMES = [];
+const standingsState = { f1: "idle", f2: "idle", f3: "idle" }; // idle | loading | ready | error
+
+async function ensureF1Standings(){
+  if (standingsState.f1 === "ready" || standingsState.f1 === "loading") return;
+  standingsState.f1 = "loading";
   try{
     const [standingsRes, resultsRes, sprintRes] = await Promise.all([
       fetch("https://api.jolpi.ca/ergast/f1/2026/driverStandings.json"),
       fetch("https://api.jolpi.ca/ergast/f1/2026/results.json?limit=1000"),
       fetch("https://api.jolpi.ca/ergast/f1/2026/sprint.json?limit=1000"),
     ]);
-    if(!standingsRes.ok || !resultsRes.ok) throw new Error("standings/results fetch failed");
-
+    if (!standingsRes.ok || !resultsRes.ok) throw new Error("F1 standings/results fetch failed");
     const standingsJson = await standingsRes.json();
     const resultsJson = await resultsRes.json();
     const sprintJson = sprintRes.ok ? await sprintRes.json() : null;
 
     const standingsList = standingsJson?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
-    if(!standingsList.length) throw new Error("empty standings");
+    if (!standingsList.length) throw new Error("F1 standings empty");
 
-    // per-round points, keyed by round number then driverId — mirrors the FIA
-    // F2 standings grid, which breaks every round into Sprint Race + Race points
     const raceMap = {};
     (resultsJson?.MRData?.RaceTable?.Races || []).forEach(race=>{
-      const m = {};
-      (race.Results || []).forEach(r=>{ m[r.Driver.driverId] = r.points; });
-      raceMap[race.round] = m;
+      const m = {}; (race.Results || []).forEach(r=>{ m[r.Driver.driverId] = r.points; }); raceMap[race.round] = m;
     });
     const sprintMap = {};
     (sprintJson?.MRData?.RaceTable?.Races || []).forEach(race=>{
-      const m = {};
-      (race.SprintResults || []).forEach(r=>{ m[r.Driver.driverId] = r.points; });
-      sprintMap[race.round] = m;
+      const m = {}; (race.SprintResults || []).forEach(r=>{ m[r.Driver.driverId] = r.points; }); sprintMap[race.round] = m;
     });
 
-    // column headers, one per round on the calendar (F1_ROUNDS is already
-    // defined above for the Schedule tab — reused here as the single source
-    // of truth for round names/locations/dates)
-    const roundCols = F1_ROUNDS.map(r=>{
-      const start = new Date(r.sessions.fp1 || r.sessions.fp2 || r.sessions.qualifying);
-      const end = new Date(r.sessions.gp);
-      return { round: String(r.round), location: r.location, dateLabel: fmtDateRange(start, end) };
-    });
-
-    let headRoundCells = "";
-    let headSubCells = "";
-    roundCols.forEach(c=>{
-      headRoundCells += `<th class="round-hdr" colspan="2">${c.location}<span class="round-date">${c.dateLabel}</span></th>`;
-      headSubCells += `<th class="subhdr">SR</th><th class="subhdr">R</th>`;
-    });
-
-    let bodyRows = "";
-    standingsList.forEach(d=>{
+    const drivers = standingsList.map(d=>{
       const did = d.Driver.driverId;
       const flag = NATIONALITY_FLAGS[d.Driver.nationality] || "";
       const shortName = d.Driver.code || (d.Driver.givenName[0] + ". " + d.Driver.familyName);
-      let cells = "";
-      roundCols.forEach(c=>{
-        const sp = sprintMap[c.round]?.[did];
-        const rp = raceMap[c.round]?.[did];
-        cells += `<td>${sp === undefined ? '<span class="zero">-</span>' : sp}</td>`;
-        cells += `<td>${rp === undefined ? '<span class="zero">-</span>' : rp}</td>`;
+      const team = d.Constructors && d.Constructors[0] ? d.Constructors[0].name : "";
+      const rounds = F1_ROUNDS.map((rd, i)=>{
+        const roundNum = String(i + 1);
+        const raceHappened = !!raceMap[roundNum];
+        const sprintHappened = !!sprintMap[roundNum];
+        const r = raceHappened ? (raceMap[roundNum][did] !== undefined ? parseFloat(raceMap[roundNum][did]) : 0) : null;
+        const sr = rd.sprint ? (sprintHappened ? (sprintMap[roundNum][did] !== undefined ? parseFloat(sprintMap[roundNum][did]) : 0) : null) : null;
+        return [sr, r];
       });
-      bodyRows += `
-        <tr>
-          <td class="col-driver"><span class="standings-flag">${flag}</span><span class="standings-name">${shortName}</span></td>
-          <td class="col-points">${d.points}</td>
-          ${cells}
-        </tr>
-      `;
+      return [shortName, flag, team, ...rounds, parseFloat(d.points)];
     });
 
-    f1StandingsHtml = `
-      <div class="standings-scroll">
-        <table class="standings-matrix">
-          <thead>
-            <tr>
-              <th class="col-driver" rowspan="2">Driver</th>
-              <th class="col-points" rowspan="2">Points</th>
-              ${headRoundCells}
-            </tr>
-            <tr>${headSubCells}</tr>
-          </thead>
-          <tbody>${bodyRows}</tbody>
-        </table>
-      </div>
-      <div class="standings-legend">SR: Sprint Race &nbsp;·&nbsp; R: Race &nbsp;·&nbsp; scroll to see every round</div>
-    `;
-    if(activeStandingsSeries === "f1") body.innerHTML = f1StandingsHtml;
-    standingsLoaded.f1 = true;
+    F1_STANDINGS = { drivers };
+    standingsState.f1 = "ready";
   }catch(e){
-    console.error("Standings load failed:", e);
-    if(activeStandingsSeries === "f1"){
-      body.innerHTML = '<div class="standings-error">Standings unavailable right now — check back later.</div>';
-    }
+    console.error("F1 standings load failed:", e);
+    standingsState.f1 = "error";
   }
 }
+
+async function ensureF2F3Standings(){
+  if (standingsState.f2 !== "idle" || standingsState.f3 !== "idle") return;
+  standingsState.f2 = "loading"; standingsState.f3 = "loading";
+  try{
+    const res = await fetch("/.netlify/functions/get-f2f3-standings");
+    if (!res.ok) throw new Error("F2/F3 standings fetch failed");
+    const json = await res.json();
+
+    if (json.f2 && json.f2.drivers && json.f2.drivers.length){
+      F2_ROUND_NAMES = json.f2.roundNames || [];
+      F2_STANDINGS = json.f2.drivers.map(d => [
+        d.name, "", ...(d.rounds || []).map(rd => [rd.sr, rd.fr]), d.points
+      ]);
+      standingsState.f2 = "ready";
+    } else {
+      standingsState.f2 = "error";
+    }
+
+    if (json.f3 && json.f3.drivers && json.f3.drivers.length){
+      F3_ROUND_NAMES = json.f3.roundNames || [];
+      F3_STANDINGS = json.f3.drivers.map(d => [
+        d.name, "", ...(d.rounds || []).map(rd => [rd.sr, rd.fr]), d.points
+      ]);
+      standingsState.f3 = "ready";
+    } else {
+      standingsState.f3 = "error";
+    }
+  }catch(e){
+    console.error("F2/F3 standings load failed:", e);
+    if (standingsState.f2 === "loading") standingsState.f2 = "error";
+    if (standingsState.f3 === "loading") standingsState.f3 = "error";
+  }
+}
+
+/* ============================== RENDER: STANDINGS ============================== */
+let standingsSub = "f1";
+function cellHtml(v, futureCol){
+  if (v === null || v === undefined) return `<td class="pending-val${futureCol?' future-col':''}">${futureCol ? "" : "–"}</td>`;
+  return `<td class="${v===0?'zero-val':''}">${v}</td>`;
+}
+function completedRoundCount(rows, offset, roundCount){
+  let n = 0;
+  for (let i = 0; i < roundCount; i++){
+    const anyData = rows.some(row => { const v = row[offset+i]; return v[0] !== null || v[1] !== null; });
+    if (!anyData) break;
+    n++;
+  }
+  return n;
+}
+
+async function renderStandings(){
+  const view = document.getElementById("standingsView");
+  let html = `<div class="subtabs">
+    <button class="subtab-btn sub-f1 ${standingsSub==='f1'?'active':''}" onclick="setStandingsSub('f1')">F1</button>
+    <button class="subtab-btn sub-f2 ${standingsSub==='f2'?'active':''}" onclick="setStandingsSub('f2')">F2</button>
+    <button class="subtab-btn sub-f3 ${standingsSub==='f3'?'active':''}" onclick="setStandingsSub('f3')">F3</button>
+  </div>`;
+
+  if (standingsSub === "f1"){
+    if (standingsState.f1 !== "ready"){
+      view.innerHTML = html + '<div class="standings-loading">Loading standings…</div>';
+      await ensureF1Standings();
+      if (standingsSub !== "f1") return; // user switched tabs while this was loading
+      if (standingsState.f1 !== "ready"){
+        view.innerHTML = html + '<div class="standings-error">Standings unavailable right now — check back later.</div>';
+        return;
+      }
+    }
+    const roundHasSR = F1_ROUNDS.map(r => r.sprint);
+    html += `<div class="std-wrap sub-f1"><div class="std-scroll"><table class="std"><thead>
+      <tr class="venue-row"><th class="driver-cell" rowspan="2">Driver</th><th class="pts-cell" rowspan="2">Points</th>`;
+    F1_ROUNDS.forEach((r, i) => html += `<th colspan="${roundHasSR[i] ? 2 : 1}">${r.name}</th>`);
+    html += `</tr><tr class="sub-row">`;
+    roundHasSR.forEach(hasSR => { if (hasSR) html += `<th>SR</th><th>R</th>`; else html += `<th>R</th>`; });
+    html += `</tr></thead><tbody>`;
+    F1_STANDINGS.drivers.forEach(row => {
+      const name = row[0], flag = row[1];
+      const pts = row[row.length-1];
+      const roundVals = row.slice(3, row.length-1);
+      html += `<tr><td class="driver-cell"><span class="flag-ico">${flag}</span>${name}</td><td class="pts-cell accent-f1">${pts}</td>`;
+      roundVals.forEach(([sr, r], i) => {
+        const future = sr === null && r === null;
+        if (roundHasSR[i]) html += cellHtml(sr, future) + cellHtml(r, future);
+        else html += cellHtml(r, future);
+      });
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div><div class="std-footnote">SR: Sprint Race &nbsp;·&nbsp; R: Race &nbsp;·&nbsp; live from api.jolpi.ca &nbsp;·&nbsp; blank columns are rounds still to come</div></div>`;
+    view.innerHTML = html;
+    renderCharts("f1", F1_ROUNDS.map(r=>r.name), F1_STANDINGS.drivers, 3);
+    appendChartsAndRun();
+  } else {
+    const stateKey = standingsSub;
+    if (standingsState[stateKey] !== "ready"){
+      view.innerHTML = html + '<div class="standings-loading">Loading standings…</div>';
+      await ensureF2F3Standings();
+      if (standingsSub !== stateKey) return;
+      if (standingsState[stateKey] !== "ready"){
+        view.innerHTML = html + '<div class="standings-error">Standings unavailable right now — check back later.</div>';
+        return;
+      }
+    }
+    const rounds = standingsSub === "f2" ? F2_ROUND_NAMES : F3_ROUND_NAMES;
+    const data = standingsSub === "f2" ? F2_STANDINGS : F3_STANDINGS;
+    html += `<div class="std-wrap sub-${standingsSub}"><div class="std-scroll"><table class="std"><thead>
+      <tr class="venue-row"><th class="driver-cell" rowspan="2">Driver</th><th class="pts-cell accent-${standingsSub}" rowspan="2">Points</th>`;
+    rounds.forEach(name => html += `<th colspan="2">${name}</th>`);
+    html += `</tr><tr class="sub-row">`;
+    rounds.forEach(() => html += `<th>SR</th><th>FR</th>`);
+    html += `</tr></thead><tbody>`;
+    data.forEach(row => {
+      const name = row[0], flag = row[1];
+      const pts = row[row.length-1];
+      const cols = row.slice(2, row.length-1);
+      html += `<tr><td class="driver-cell"><span class="flag-ico">${flag}</span>${name}</td><td class="pts-cell accent-${standingsSub}">${pts}</td>`;
+      cols.forEach(([sr,fr]) => {
+        const future = sr === null && fr === null;
+        html += cellHtml(sr, future) + cellHtml(fr, future);
+      });
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div><div class="std-footnote">SR: Sprint Race &nbsp;·&nbsp; FR: Feature Race &nbsp;·&nbsp; live from fiaformula${standingsSub==='f2'?'2':'3'}.com &nbsp;·&nbsp; blank columns are rounds still to come</div></div>`;
+    view.innerHTML = html;
+    renderCharts(standingsSub, rounds, data, 2);
+    appendChartsAndRun();
+  }
+}
+function setStandingsSub(s){ standingsSub = s; renderStandings(); }
+
+/* ============================== RENDER: CHARTS ============================== */
+let cumulativeChart = null, perRaceChart = null;
+const CHART_COLORS = ["#e10600","#1e6fd9","#7b3fe4","#ffb020","#22c55e","#ec4899","#06b6d4","#f97316"];
+function renderCharts(sub, roundNames, rows, offset){
+  const n = completedRoundCount(rows, offset, roundNames.length);
+  const labels = roundNames.slice(0, n);
+  const top = [...rows].sort((a,b) => b[b.length-1] - a[a.length-1]).slice(0, 8);
+  const perRaceSeries = top.map(row => {
+    const vals = row.slice(offset, offset + n).map(([a,b]) => (a||0) + (b||0));
+    return { name: row[0], vals };
+  });
+  const cumulativeSeries = perRaceSeries.map(s => {
+    let running = 0;
+    return { name: s.name, vals: s.vals.map(v => (running += v)) };
+  });
+
+  const chartsHtml = n === 0 ? "" : `
+    <div class="chart-card">
+      <div class="chart-title">Cumulative Points by Race</div>
+      <div class="chart-sub">Top 8 drivers · running total after each completed round</div>
+      <div class="chart-wrap"><canvas id="cumulativeCanvas"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Points per Race</div>
+      <div class="chart-sub">Top 8 drivers · points scored at each individual round (SR+${offset===3?'R':'FR'} combined)</div>
+      <div class="chart-wrap"><canvas id="perRaceCanvas"></canvas></div>
+    </div>`;
+
+  window.__pendingCharts = () => {
+    if (typeof Chart === "undefined" || n === 0) return;
+    if (cumulativeChart) { cumulativeChart.destroy(); cumulativeChart = null; }
+    if (perRaceChart) { perRaceChart.destroy(); perRaceChart = null; }
+    const legendColor = "#9a9aa2";
+    const gridColor = "rgba(255,255,255,.06)";
+    const commonScales = {
+      x: { ticks: { color: legendColor, font: { size: 10 } }, grid: { color: gridColor } },
+      y: { ticks: { color: legendColor, font: { size: 10 } }, grid: { color: gridColor }, beginAtZero: true }
+    };
+    const cumCanvas = document.getElementById("cumulativeCanvas");
+    const perCanvas = document.getElementById("perRaceCanvas");
+    if (cumCanvas){
+      cumulativeChart = new Chart(cumCanvas.getContext("2d"), {
+        type: "line",
+        data: { labels, datasets: cumulativeSeries.map((s,i) => ({
+          label: s.name, data: s.vals, borderColor: CHART_COLORS[i], backgroundColor: CHART_COLORS[i],
+          borderWidth: 2, tension: .25, pointRadius: 2.5, pointHoverRadius: 4
+        })) },
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "nearest", intersect: false },
+          plugins: { legend: { position: "bottom", labels: { color: legendColor, boxWidth: 10, font: { size: 10 } } } },
+          scales: commonScales }
+      });
+    }
+    if (perCanvas){
+      perRaceChart = new Chart(perCanvas.getContext("2d"), {
+        type: "bar",
+        data: { labels, datasets: perRaceSeries.map((s,i) => ({
+          label: s.name, data: s.vals, backgroundColor: CHART_COLORS[i]
+        })) },
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom", labels: { color: legendColor, boxWidth: 10, font: { size: 10 } } } },
+          scales: commonScales }
+      });
+    }
+  };
+  renderCharts._html = chartsHtml;
+}
+function appendChartsAndRun(){
+  const view = document.getElementById("standingsView");
+  if (renderCharts._html) view.innerHTML += renderCharts._html;
+  if (window.__pendingCharts) window.__pendingCharts();
+}
+
+/* ============================== TABS ============================== */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.getElementById("scheduleView").style.display = tab === "schedule" ? "block" : "none";
+    document.getElementById("standingsView").style.display = tab === "standings" ? "block" : "none";
+    if (tab === "standings") renderStandings();
+  });
+});
+
+/* ============================== INIT ============================== */
+document.getElementById("updatedStamp").textContent = "Updated " + new Date(LAST_UPDATED_ISO + "T12:00:00Z").toLocaleDateString("en-US",{timeZone:"America/New_York", month:"short", day:"numeric"});
+renderSchedule();
 
 /* service worker for installability (best effort, safe to fail) */
 if("serviceWorker" in navigator){
