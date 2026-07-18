@@ -1,13 +1,55 @@
 // On-demand endpoint the page calls when the F2 or F3 standings tab is opened:
 // /.netlify/functions/get-f2f3-standings
 //
-// Reuses the same FIA-page-parsing approach already proven in
-// weekly-race-email.mjs (parses the embedded __NEXT_DATA__ JSON rather than
-// scraping rendered HTML tables, which is more robust to layout changes).
+// FIA's standings pages used to embed a __NEXT_DATA__ JSON blob, but that's
+// gone now — the page ships a real server-rendered <table> instead (Driver /
+// SR / FR... / Points columns). This parses that table directly: find the
+// table whose header mentions "Driver" and "Points", pull each row's first
+// cell (name) and last cell (points total), and keep rows that look like an
+// actual driver line (e.g. "N. Tsolov") with a numeric points total.
 //
 // No database/cache needed — this just scrapes fresh on every call. A
 // Cache-Control header lets Netlify's CDN serve repeat requests within the
 // same 30-minute window without re-hitting FIA's site every time.
+
+function parseHtmlTable(html) {
+  const tableMatches = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)];
+  for (const tm of tableMatches) {
+    const tableHtml = tm[0];
+    const rowMatches = [...tableHtml.matchAll(/<tr[\s\S]*?<\/tr>/gi)];
+    const rows = [];
+    for (const rm of rowMatches) {
+      const cellMatches = [...rm[0].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)];
+      const cells = cellMatches.map((cm) =>
+        cm[1].replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim()
+      );
+      if (cells.length) rows.push(cells);
+    }
+    const headerText = rows.slice(0, 2).flat().join(" ").toLowerCase();
+    if (headerText.includes("driver") && headerText.includes("points")) {
+      return { rows, tableCount: tableMatches.length };
+    }
+  }
+  return { rows: null, tableCount: tableMatches.length };
+}
+
+function extractStandings(rows) {
+  const out = [];
+  for (const cells of rows) {
+    const name = cells[0];
+    const last = cells[cells.length - 1];
+    const points = parseInt(last, 10);
+    if (
+      name &&
+      /^[A-Z]\.\s*[A-Za-zÀ-ÿ'’-]+/.test(name) &&
+      !isNaN(points) &&
+      String(points) === last.trim()
+    ) {
+      out.push({ name, points });
+    }
+  }
+  return out.map((r, i) => ({ position: i + 1, name: r.name, team: "", points: r.points }));
+}
 
 async function getFiaStandings(seriesUrl, seriesLabel) {
   try {
@@ -15,56 +57,27 @@ async function getFiaStandings(seriesUrl, seriesLabel) {
     if (!res.ok) throw new Error(seriesLabel + " page fetch failed: " + res.status);
     const html = await res.text();
 
-    const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-    if (!match) {
-      // TEMP DEBUG: report back what the page actually looked like instead of
-      // just failing silently, so we can see why the expected script tag is missing.
+    const { rows, tableCount } = parseHtmlTable(html);
+    if (!rows) {
       throw new Error(
-        seriesLabel + " __NEXT_DATA__ not found. html length=" + html.length +
-        " snippet=" + html.slice(0, 300).replace(/\s+/g, " ")
+        seriesLabel + " standings table not found. html length=" + html.length +
+        " tablesOnPage=" + tableCount
       );
     }
-    const data = JSON.parse(match[1]);
 
-    const found = findStandingsArray(data);
-    if (!found) throw new Error(seriesLabel + " standings array not found in page data");
+    const standings = extractStandings(rows);
+    if (!standings.length) {
+      throw new Error(
+        seriesLabel + " table found but no driver rows matched. rowCount=" + rows.length +
+        " sampleRow=" + JSON.stringify(rows[Math.min(2, rows.length - 1)] || [])
+      );
+    }
 
-    // Full list this time (the email version only needed the top 10).
-    return { ok: true, rows: found.map((row, i) => ({
-      position: row.position || row.rank || i + 1,
-      name: row.driverName || row.name || row.driver || "Unknown",
-      team: row.teamName || row.team || "",
-      points: row.points ?? row.totalPoints ?? "?",
-    })) };
+    return { ok: true, rows: standings };
   } catch (err) {
     console.error(seriesLabel + " standings lookup failed:", err);
     return { ok: false, error: err.message };
   }
-}
-
-function findStandingsArray(obj, depth = 0) {
-  if (depth > 6 || !obj || typeof obj !== "object") return null;
-  if (Array.isArray(obj)) {
-    if (
-      obj.length > 3 &&
-      typeof obj[0] === "object" &&
-      obj[0] !== null &&
-      Object.keys(obj[0]).some((k) => /name|driver/i.test(k)) &&
-      Object.keys(obj[0]).some((k) => /point/i.test(k))
-    ) {
-      return obj;
-    }
-    for (const item of obj) {
-      const found = findStandingsArray(item, depth + 1);
-      if (found) return found;
-    }
-    return null;
-  }
-  for (const key of Object.keys(obj)) {
-    const found = findStandingsArray(obj[key], depth + 1);
-    if (found) return found;
-  }
-  return null;
 }
 
 export default async (req) => {
