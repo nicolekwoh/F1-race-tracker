@@ -1,4 +1,4 @@
-const CACHE = "race-tracker-v9";
+const CACHE = "race-tracker-v10";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -15,19 +15,24 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+// Network-first: always try to fetch the latest version first. Only fall
+// back to the cached copy if the network request fails (e.g. offline) —
+// this was previously cache-first ("return cached || network"), which meant
+// the app would keep showing whatever was cached from a *previous* visit
+// and silently refresh the cache in the background for *next* time. That
+// made every deploy look like it hadn't taken effect, even after a hard
+// refresh, because the service worker intercepted the request before it
+// ever reached the network.
 self.addEventListener("fetch", (e) => {
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const network = fetch(e.request)
-        .then((res) => {
-          if (res && res.status === 200 && e.request.method === "GET") {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(e.request)
+      .then((res) => {
+        if (res && res.status === 200 && e.request.method === "GET") {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
