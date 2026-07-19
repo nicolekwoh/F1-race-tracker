@@ -67,7 +67,7 @@ function extractFullStandings(rows, knownRoundNames) {
     10
   );
 
-  if (isNaN(bestWidth) || bestWidth === 0 || bestWidth % 2 !== 0) {
+  if (isNaN(bestWidth) || bestWidth === 0) {
     // Couldn't make sense of round columns — fall back to totals-only.
     return {
       roundNames: [],
@@ -75,9 +75,16 @@ function extractFullStandings(rows, knownRoundNames) {
     };
   }
 
-  const roundPairCount = bestWidth / 2;
-  const roundNames = knownRoundNames.slice(0, roundPairCount);
-  while (roundNames.length < roundPairCount) roundNames.push("Round " + (roundNames.length + 1));
+  // Normally every round is an SR+FR pair, but some series' pages have a
+  // trailing unpaired column (observed on F3's page — one extra FR-only
+  // column past the last named round). Handle both: pair up what divides
+  // evenly, then tack on one single-column "round" for any odd remainder
+  // rather than discarding the whole row's data.
+  const roundPairCount = Math.floor(bestWidth / 2);
+  const hasTrailingSingle = bestWidth % 2 === 1;
+  const totalRounds = roundPairCount + (hasTrailingSingle ? 1 : 0);
+  const roundNames = knownRoundNames.slice(0, totalRounds);
+  while (roundNames.length < totalRounds) roundNames.push("Round " + (roundNames.length + 1));
 
   const out = drivers
     .filter((d) => d.roundCells.length === bestWidth)
@@ -88,6 +95,13 @@ function extractFullStandings(rows, knownRoundNames) {
         const fr = d.roundCells[r * 2 + 1];
         rounds.push({
           sr: sr === "-" || sr === "" || sr === undefined ? null : parseInt(sr, 10),
+          fr: fr === "-" || fr === "" || fr === undefined ? null : parseInt(fr, 10),
+        });
+      }
+      if (hasTrailingSingle) {
+        const fr = d.roundCells[bestWidth - 1];
+        rounds.push({
+          sr: null,
           fr: fr === "-" || fr === "" || fr === undefined ? null : parseInt(fr, 10),
         });
       }
