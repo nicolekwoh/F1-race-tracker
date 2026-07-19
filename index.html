@@ -540,7 +540,9 @@ async function ensureF2F3Standings(){
   if (standingsState.f2 !== "idle" || standingsState.f3 !== "idle") return;
   standingsState.f2 = "loading"; standingsState.f3 = "loading";
   try{
-    const res = await fetch("/.netlify/functions/get-f2f3-standings");
+    // cache: "no-store" so a stale browser-cached response (this endpoint is
+    // intentionally CDN-cacheable server-side) never gets stuck showing old data
+    const res = await fetch("/.netlify/functions/get-f2f3-standings", { cache: "no-store" });
     if (!res.ok) throw new Error("F2/F3 standings fetch failed");
     const json = await res.json();
 
