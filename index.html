@@ -492,17 +492,21 @@ const standingsState = { f1: "idle", f2: "idle", f3: "idle" }; // idle | loading
 // with ?offset= until every row is collected, merging any race that happens
 // to straddle a page boundary.
 async function fetchAllRaces(baseUrl, resultsKey){
+  // NOTE: jolpi.ca's own "total" field in the response has been observed to
+  // under-report (e.g. claiming 154 rows when 190+ actually exist), so it's
+  // not trustworthy as a stop condition. Instead just keep paging by 100
+  // until a page genuinely comes back with zero races — that's the only
+  // reliable signal that we've reached the end. guard caps it defensively
+  // in case something ever returns a non-empty page forever.
   const merged = {};
   let offset = 0;
   const pageSize = 100;
-  let total = Infinity;
   let guard = 0;
-  while (offset < total && guard < 10){
+  while (guard < 15){
     guard++;
-    const res = await fetch(`${baseUrl}&limit=${pageSize}&offset=${offset}`);
+    const res = await fetch(`${baseUrl}&limit=${pageSize}&offset=${offset}`, { cache: "no-store" });
     if (!res.ok) break;
     const json = await res.json();
-    total = parseInt(json?.MRData?.total, 10) || 0;
     const races = json?.MRData?.RaceTable?.Races || [];
     if (!races.length) break;
     races.forEach(race=>{
