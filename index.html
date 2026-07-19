@@ -486,29 +486,55 @@ let F1_STANDINGS = null, F2_STANDINGS = null, F3_STANDINGS = null;
 let F2_ROUND_NAMES = [], F3_ROUND_NAMES = [];
 const standingsState = { f1: "idle", f2: "idle", f3: "idle" }; // idle | loading | ready | error
 
+// jolpi.ca caps every response at 100 result rows (~5 races' worth) no
+// matter what ?limit= is requested — a full season has 300+ rows once enough
+// rounds are in, so a single call silently drops later rounds. Page through
+// with ?offset= until every row is collected, merging any race that happens
+// to straddle a page boundary.
+async function fetchAllRaces(baseUrl, resultsKey){
+  const merged = {};
+  let offset = 0;
+  const pageSize = 100;
+  let total = Infinity;
+  let guard = 0;
+  while (offset < total && guard < 10){
+    guard++;
+    const res = await fetch(`${baseUrl}&limit=${pageSize}&offset=${offset}`);
+    if (!res.ok) break;
+    const json = await res.json();
+    total = parseInt(json?.MRData?.total, 10) || 0;
+    const races = json?.MRData?.RaceTable?.Races || [];
+    if (!races.length) break;
+    races.forEach(race=>{
+      if (!merged[race.round]) merged[race.round] = { ...race, [resultsKey]: [] };
+      merged[race.round][resultsKey].push(...(race[resultsKey] || []));
+    });
+    offset += pageSize;
+  }
+  return Object.values(merged);
+}
+
 async function ensureF1Standings(){
   if (standingsState.f1 === "ready" || standingsState.f1 === "loading") return;
   standingsState.f1 = "loading";
   try{
-    const [standingsRes, resultsRes, sprintRes] = await Promise.all([
+    const [standingsRes, raceResults, sprintResults] = await Promise.all([
       fetch("https://api.jolpi.ca/ergast/f1/2026/driverStandings.json"),
-      fetch("https://api.jolpi.ca/ergast/f1/2026/results.json?limit=1000"),
-      fetch("https://api.jolpi.ca/ergast/f1/2026/sprint.json?limit=1000"),
+      fetchAllRaces("https://api.jolpi.ca/ergast/f1/2026/results.json?", "Results"),
+      fetchAllRaces("https://api.jolpi.ca/ergast/f1/2026/sprint.json?", "SprintResults"),
     ]);
-    if (!standingsRes.ok || !resultsRes.ok) throw new Error("F1 standings/results fetch failed");
+    if (!standingsRes.ok) throw new Error("F1 standings fetch failed");
     const standingsJson = await standingsRes.json();
-    const resultsJson = await resultsRes.json();
-    const sprintJson = sprintRes.ok ? await sprintRes.json() : null;
 
     const standingsList = standingsJson?.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
     if (!standingsList.length) throw new Error("F1 standings empty");
 
     const raceMap = {};
-    (resultsJson?.MRData?.RaceTable?.Races || []).forEach(race=>{
+    raceResults.forEach(race=>{
       const m = {}; (race.Results || []).forEach(r=>{ m[r.Driver.driverId] = r.points; }); raceMap[race.round] = m;
     });
     const sprintMap = {};
-    (sprintJson?.MRData?.RaceTable?.Races || []).forEach(race=>{
+    sprintResults.forEach(race=>{
       const m = {}; (race.SprintResults || []).forEach(r=>{ m[r.Driver.driverId] = r.points; }); sprintMap[race.round] = m;
     });
 
