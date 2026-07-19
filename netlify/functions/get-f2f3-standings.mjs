@@ -19,6 +19,33 @@
 const F2_ROUND_NAMES = ["Melbourne","Miami","Montréal","Monaco","Barcelona","Austria","Silverstone","Belgium","Hungary","Italy","Spain","Azerbaijan","Qatar","Abu Dhabi"];
 const F3_ROUND_NAMES = ["Melbourne","Monaco","Barcelona","Austria","Silverstone","Belgium","Hungary","Italy","Spain"];
 
+// FIA's live standings table (parsed above) has no nationality data at all —
+// only the separate driver-bio listing pages (fiaformula2.com/en/drivers,
+// fiaformula3.com/en/drivers) show a "Flag of <country>" per driver. That
+// roster is stable for the season, so it's hardcoded here rather than
+// scraping a second page on every request. Keyed by the exact "X. Surname"
+// string FIA's standings table itself uses, so no name-matching logic needed.
+const F2_FLAGS = {
+  "N. Tsolov": "🇧🇬", "G. Mini": "🇮🇹", "R. Câmara": "🇧🇷", "A. Dunne": "🇮🇪",
+  "N. Leon": "🇲🇽", "K. Maini": "🇮🇳", "D. Beganovic": "🇸🇪", "M. Stenshorne": "🇳🇴",
+  "L. van Hoepen": "🇳🇱", "J. Dürksen": "🇵🇾", "R. Villagomez": "🇲🇽", "R. Miyata": "🇯🇵",
+  "O. Goethe": "🇩🇪", "S. Montoya": "🇨🇴", "T. Inthraphuvasak": "🇹🇭", "R. Bilinski": "🇵🇱",
+  "C. Herta": "🇺🇸", "J. Bennett": "🇬🇧", "N. Varrone": "🇦🇷", "E. Fittipaldi": "🇧🇷",
+  "C. Shields": "🇬🇧", "M. Boya": "🇪🇸",
+};
+// A few F3 entries (Benavides, Heuzenroeder, Hanna) are one-off substitute
+// drivers not listed on FIA's official roster page — left without a flag.
+const F3_FLAGS = {
+  "U. Ugochukwu": "🇺🇸", "F. Slater": "🇬🇧", "T. Naël": "🇫🇷", "N. Stromsted": "🇩🇰",
+  "B. Badoer": "🇮🇹", "B. Del Pino": "🇪🇸", "P. Clerot": "🇧🇷", "M. Gladysz": "🇵🇱",
+  "H. Yamakoshi": "🇯🇵", "T. Kato": "🇯🇵", "J. Nakamura": "🇯🇵", "E. Rivera": "🇲🇽",
+  "E. Deligny": "🇫🇷", "T. Taponen": "🇫🇮", "G. Xie": "🇨🇳", "J. Wharton": "🇦🇺",
+  "L. Sharp": "🇳🇿", "Y. David": "🇱🇰", "A. Giusti": "🇫🇷", "K. Le": "🇯🇵",
+  "M. Colnaghi": "🇦🇷", "M. De Palo": "🇮🇹", "N. Lacorte": "🇮🇹", "F. Mclaughlin": "🇮🇪",
+  "J. Garfias": "🇲🇽", "C. Ho": "🇸🇬", "N. Bhirombhakdi": "🇹🇭", "F. Barrichello": "🇧🇷",
+  "W. Shin": "🇰🇷", "R. Escotto": "🇲🇽",
+};
+
 function parseHtmlTable(html) {
   const tableMatches = [...html.matchAll(/<table[\s\S]*?<\/table>/gi)];
   for (const tm of tableMatches) {
@@ -40,7 +67,7 @@ function parseHtmlTable(html) {
   return { rows: null, tableCount: tableMatches.length };
 }
 
-function extractFullStandings(rows, knownRoundNames) {
+function extractFullStandings(rows, knownRoundNames, flagMap) {
   const drivers = [];
   for (const cells of rows) {
     const name = cells[0];
@@ -105,13 +132,13 @@ function extractFullStandings(rows, knownRoundNames) {
           fr: fr === "-" || fr === "" || fr === undefined ? null : parseInt(fr, 10),
         });
       }
-      return { position: i + 1, name: d.name, points: d.points, rounds };
+      return { position: i + 1, name: d.name, flag: flagMap[d.name] || "", points: d.points, rounds };
     });
 
   return { roundNames, drivers: out };
 }
 
-async function getFiaStandings(seriesUrl, seriesLabel, roundNames) {
+async function getFiaStandings(seriesUrl, seriesLabel, roundNames, flagMap) {
   try {
     const res = await fetch(seriesUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!res.ok) throw new Error(seriesLabel + " page fetch failed: " + res.status);
@@ -125,7 +152,7 @@ async function getFiaStandings(seriesUrl, seriesLabel, roundNames) {
       );
     }
 
-    const result = extractFullStandings(rows, roundNames);
+    const result = extractFullStandings(rows, roundNames, flagMap);
     if (!result || !result.drivers.length) {
       throw new Error(seriesLabel + " table found but no driver rows matched. rowCount=" + rows.length);
     }
@@ -139,8 +166,8 @@ async function getFiaStandings(seriesUrl, seriesLabel, roundNames) {
 
 export default async (req) => {
   const [f2Result, f3Result] = await Promise.all([
-    getFiaStandings("https://www.fiaformula2.com/en/standings/2026/drivers", "F2", F2_ROUND_NAMES),
-    getFiaStandings("https://www.fiaformula3.com/en/standings/2026/drivers", "F3", F3_ROUND_NAMES),
+    getFiaStandings("https://www.fiaformula2.com/en/standings/2026/drivers", "F2", F2_ROUND_NAMES, F2_FLAGS),
+    getFiaStandings("https://www.fiaformula3.com/en/standings/2026/drivers", "F3", F3_ROUND_NAMES, F3_FLAGS),
   ]);
 
   return new Response(JSON.stringify({
