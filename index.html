@@ -480,52 +480,41 @@ function tickCountdown(){
    then cached in these row arrays for the rest of the visit. Row shape
    matches what renderStandings()/renderCharts() expect:
      F1: [name, flag, team, [sr,r] × 22 rounds, points]
-     F2/F3: [name, flag, [sr,fr] × N rounds, points]  (flag left blank — the
-       live scrape has no nationality data) */
+     F2/F3: [name, flag, [sr,fr] × N rounds, points]  (flag comes from a
+       hardcoded roster lookup in the Netlify function — FIA's live standings
+       table itself has no nationality data, only the separate driver-bio
+       pages do) */
 let F1_STANDINGS = null, F2_STANDINGS = null, F3_STANDINGS = null;
 let F2_ROUND_NAMES = [], F3_ROUND_NAMES = [];
 const standingsState = { f1: "idle", f2: "idle", f3: "idle" }; // idle | loading | ready | error
 
-// jolpi.ca caps every response at 100 result rows (~5 races' worth) no
-// matter what ?limit= is requested — a full season has 300+ rows once enough
-// rounds are in, so a single call silently drops later rounds. Page through
-// with ?offset= until every row is collected, merging any race that happens
-// to straddle a page boundary.
-async function fetchAllRaces(baseUrl, resultsKey){
-  // NOTE: jolpi.ca's own "total" field in the response has been observed to
-  // under-report (e.g. claiming 154 rows when 190+ actually exist), so it's
-  // not trustworthy as a stop condition. Instead just keep paging by 100
-  // until a page genuinely comes back with zero races — that's the only
-  // reliable signal that we've reached the end. guard caps it defensively
-  // in case something ever returns a non-empty page forever.
-  const merged = {};
-  let offset = 0;
-  const pageSize = 100;
-  let guard = 0;
-  while (guard < 15){
-    guard++;
-    const res = await fetch(`${baseUrl}&limit=${pageSize}&offset=${offset}`, { cache: "no-store" });
-    if (!res.ok) break;
+// jolpi.ca's season-wide /results.json and /sprint.json endpoints paginate
+// unreliably — a fixed-size page of "results" rows doesn't line up with race
+// boundaries, and pages have been observed to come back short or drop whole
+// races (Monaco/Barcelona/Austria vanished this way even with offset-based
+// paging). The per-round endpoint (/2026/{round}/results.json) has none of
+// that ambiguity — it always returns exactly one race's full result set in
+// one response — so fetch every round individually instead of paging.
+async function fetchRoundRace(round, kind){
+  try{
+    const res = await fetch(`https://api.jolpi.ca/ergast/f1/2026/${round}/${kind}.json`, { cache: "no-store" });
+    if (!res.ok) return null;
     const json = await res.json();
-    const races = json?.MRData?.RaceTable?.Races || [];
-    if (!races.length) break;
-    races.forEach(race=>{
-      if (!merged[race.round]) merged[race.round] = { ...race, [resultsKey]: [] };
-      merged[race.round][resultsKey].push(...(race[resultsKey] || []));
-    });
-    offset += pageSize;
+    return json?.MRData?.RaceTable?.Races?.[0] || null;
+  }catch(e){
+    return null;
   }
-  return Object.values(merged);
 }
 
 async function ensureF1Standings(){
   if (standingsState.f1 === "ready" || standingsState.f1 === "loading") return;
   standingsState.f1 = "loading";
   try{
+    const roundNumbers = F1_ROUNDS.map((_, i) => i + 1);
     const [standingsRes, raceResults, sprintResults] = await Promise.all([
-      fetch("https://api.jolpi.ca/ergast/f1/2026/driverStandings.json"),
-      fetchAllRaces("https://api.jolpi.ca/ergast/f1/2026/results.json?", "Results"),
-      fetchAllRaces("https://api.jolpi.ca/ergast/f1/2026/sprint.json?", "SprintResults"),
+      fetch("https://api.jolpi.ca/ergast/f1/2026/driverStandings.json", { cache: "no-store" }),
+      Promise.all(roundNumbers.map(n => fetchRoundRace(n, "results"))),
+      Promise.all(roundNumbers.map(n => fetchRoundRace(n, "sprint"))),
     ]);
     if (!standingsRes.ok) throw new Error("F1 standings fetch failed");
     const standingsJson = await standingsRes.json();
@@ -535,10 +524,12 @@ async function ensureF1Standings(){
 
     const raceMap = {};
     raceResults.forEach(race=>{
+      if (!race) return;
       const m = {}; (race.Results || []).forEach(r=>{ m[r.Driver.driverId] = r.points; }); raceMap[race.round] = m;
     });
     const sprintMap = {};
     sprintResults.forEach(race=>{
+      if (!race) return;
       const m = {}; (race.SprintResults || []).forEach(r=>{ m[r.Driver.driverId] = r.points; }); sprintMap[race.round] = m;
     });
 
@@ -579,7 +570,7 @@ async function ensureF2F3Standings(){
     if (json.f2 && json.f2.drivers && json.f2.drivers.length){
       F2_ROUND_NAMES = json.f2.roundNames || [];
       F2_STANDINGS = json.f2.drivers.map(d => [
-        d.name, "", ...(d.rounds || []).map(rd => [rd.sr, rd.fr]), d.points
+        d.name, d.flag || "", ...(d.rounds || []).map(rd => [rd.sr, rd.fr]), d.points
       ]);
       standingsState.f2 = "ready";
     } else {
@@ -589,7 +580,7 @@ async function ensureF2F3Standings(){
     if (json.f3 && json.f3.drivers && json.f3.drivers.length){
       F3_ROUND_NAMES = json.f3.roundNames || [];
       F3_STANDINGS = json.f3.drivers.map(d => [
-        d.name, "", ...(d.rounds || []).map(rd => [rd.sr, rd.fr]), d.points
+        d.name, d.flag || "", ...(d.rounds || []).map(rd => [rd.sr, rd.fr]), d.points
       ]);
       standingsState.f3 = "ready";
     } else {
